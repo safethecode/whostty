@@ -6,6 +6,7 @@ pub mod mouse;
 pub mod search;
 mod search_worker;
 pub mod session;
+pub mod shortcuts;
 pub mod terminal;
 pub mod theme;
 

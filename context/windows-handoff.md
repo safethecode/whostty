@@ -113,6 +113,32 @@ Preferences에서 계승을 끌 수 있다. 보고가 없으면 시작 디렉터
 원격 host의 file URI·네트워크/장치 경로·제어 문자는 계승하지 않는다. WSL/SSH 경로 변환과 Bash/Zsh 자동 주입은 아직 제공하지 않는다.
 WSL 기본 프로필은 Linux 홈에서 시작한다.
 
+키 바인딩은 기본 조합 위에 아래 항목을 추가한다. 예시는 기존 새 탭 조합을 해제하고 새 조합으로 옮긴다.
+`[[profiles]]`/`[theme]`와 별개로 파일 끝에 둘 수 있다. Preferences의 Keyboard shortcuts와 메뉴 tooltip이 적용된 조합을 표시한다.
+
+```toml
+[[keybindings]]
+key = "Ctrl+Shift+T"
+action = "unbind"
+
+[[keybindings]]
+key = "Ctrl+Shift+N"
+action = "new_tab"
+
+[[keybindings]]
+key = "F4"
+action = "paste"
+```
+
+지원 action: `new_tab`, `close_pane`, `split_right`, `split_down`, `focus_left/right/up/down`, `next_tab`, `previous_tab`,
+`find`, `find_next`, `find_previous`, `preferences`, `increase_font`, `decrease_font`, `reset_font`, `copy`, `paste`,
+`scroll_page_up`, `scroll_page_down`, `scroll_top`, `scroll_bottom`, `unbind`. `focus_left/right/up/down`은 각각 별도 action 이름이다.
+Ctrl/Alt/Shift 순서·대소문자는 무관하며 key는 A–Z, 0–9, F1–F12, Enter/Tab/Escape, 방향키, PageUp/PageDown,
+Home/End, Space 및 Plus/Equals/Minus/Comma 같은 키 이름을 사용한다. `Ctrl++` 대신 `Ctrl+Plus`를 쓴다.
+중복 조합·알 수 없는 키·128개 초과는 로드 오류다. 조합에 추가 modifier가 있으면 다른 조합으로 취급한다.
+시스템이 먼저 변환하는 Ctrl+C/X/V와 Ctrl+Shift+V 복사·잘라내기·붙여넣기 이벤트는 OS 경로를 유지하므로 일반 keybinding으로 재지정하지 않는다.
+AltGr 레이아웃에서는 문자 입력과 충돌하는 Ctrl+Alt+문자 조합을 피한다.
+
 기본 글꼴은 Cascadia Mono 또는 Consolas, 한글 대체 글꼴은 맑은 고딕을 로드한다.
 일반/굵게/기울임/굵은 기울임은 같은 글꼴 가족의 face를 선택하며 없으면 합성 스타일을 쓴다.
 사용자 스타일 파일은 해당 스타일의 같은 monospace 가족이어야 한다. 개별 파일은 최대 64 MiB다.
@@ -150,7 +176,8 @@ search = "#6b4f2a"
 12. 웹 URL 또는 OSC 8 링크 위에서 Ctrl을 누르면 실제 대상과 밑줄을 표시한다. Ctrl+클릭은 기본 브라우저로 열고 드래그·일반 클릭은 링크를 열지 않는다. file/임의 프로토콜 링크는 열지 않는다. TUI의 마우스 모드에서 Ctrl+클릭이 앱에 중복 전달되지 않는지 확인한다.
 13. Narrator에서 터미널 영역을 찾아 화면 텍스트·한글·결합 문자·커서/선택 위치를 읽는지 확인한다. 숨김(SGR 8) 텍스트는 접근성 값에도 나타나지 않아야 한다. 접근성 포커스로 다른 패널을 선택한 뒤 키 입력이 그 셸로 가는지 확인한다.
 14. PowerShell에서 한글·공백·따옴표가 있는 디렉터리로 이동한 뒤 상태 표시줄, 새 탭과 분할의 `Get-Location`을 확인한다. 기존 프롬프트의 오류 표시와 `$LASTEXITCODE`, 파일 시스템 외 provider, 계승 끄기, 명시 시작 경로를 확인한다.
-15. Dark/Light/사용자 색상을 재로드·저장한 뒤 재실행한다. 분할 패널·선택·검색·커서·OSC 색 변경/리셋의 대비를 확인한다.
+15. 키 바인딩을 변경·해제하고 재로드한다. tooltip과 Preferences 목록, TUI 전달, IME 조합 중 단축키, 키를 길게 눌렀을 때 새 탭/분할/닫기가 반복되지 않는지 확인한다.
+16. Dark/Light/사용자 색상을 재로드·저장한 뒤 재실행한다. 분할 패널·선택·검색·커서·OSC 색 변경/리셋의 대비를 확인한다.
 
 문제 보고에는 Windows 빌드 번호, GPU/드라이버, 화면 배율, 사용 프로필, 재현 명령, 현상·예상 결과를 기록한다.
 설정 파일이나 화면을 공유할 때 토큰·개인 경로 등은 제거한다.
