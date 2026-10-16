@@ -179,3 +179,10 @@ Mac Metal readback도 shaped text·PTY·화면 픽셀 성공을 확인했다. Wi
 Shaped text의 CPU frame/mesh/tessellation 벤치마크는 ignored release 테스트로 분리했다.
 80×40 고정 ASCII run, warmup 10회 후 200프레임을 측정하며 GPU 제출·입력 지연을 포함하지 않는 것을 JSON에 명시한다.
 Mac 3회 기준값과 포함/제외 범위는 performance.md에 남긴다.
+
+배포 감사에서 cargo-about HTML에 기본 내장 폰트의 일부 attribution이 누락된 것을 확인했다.
+잠금된 epaint_default_fonts의 TTF name table(ID 0/13/14), 파일 SHA256, 함께 제공된 고지 원문을 추출해
+EMBEDDED_FONT_LICENSES.txt를 ZIP에 포함한다. 별도 폰트 설치나 fontTools 런타임 의존성은 추가하지 않는다.
+폰트 목록 변경·원문 누락·잘못된 메타데이터는 패키징을 실패시키고, Windows/macOS CI와 ZIP 검증이 이를 검사한다.
+원문 출처: [Hack 고지](https://raw.githubusercontent.com/emilk/egui/0.31.1/crates/epaint_default_fonts/fonts/Hack-Regular.txt),
+[Ubuntu Font Licence](https://raw.githubusercontent.com/emilk/egui/0.31.1/crates/epaint_default_fonts/fonts/UFL.txt).

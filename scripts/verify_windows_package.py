@@ -11,10 +11,16 @@ def verify(path: Path) -> None:
     expected = path.with_suffix(".zip.sha256").read_text().split()[0]
     assert hashlib.sha256(path.read_bytes()).hexdigest() == expected, "ZIP checksum mismatch"
     with zipfile.ZipFile(path) as package:
-        assert sorted(package.namelist()) == ["LICENSE", "THIRD_PARTY_LICENSES.html", "whostty.exe"]
+        assert sorted(package.namelist()) == ["EMBEDDED_FONT_LICENSES.txt", "LICENSE", "THIRD_PARTY_LICENSES.html", "whostty.exe"]
         assert package.read("LICENSE").startswith(b"MIT License")
         notices = package.read("THIRD_PARTY_LICENSES.html")
         assert b"alacritty_terminal" in notices and b"portable-pty" in notices
+        fonts = package.read("EMBEDDED_FONT_LICENSES.txt").decode("utf-8")
+        for attribution in ("Source Foundry", "Bitstream", "Canonical", "Google", "John Slegers"):
+            assert attribution in fonts, f"Missing embedded font attribution: {attribution}"
+        for font in ("Hack-Regular.ttf", "NotoEmoji-Regular.ttf", "Ubuntu-Light.ttf", "emoji-icon-font.ttf"):
+            assert font in fonts, f"Missing embedded font: {font}"
+        assert fonts.count("SHA256:") == 4, "Expected hashes for the four embedded fonts"
         exe = package.read("whostty.exe")
 
     assert exe[:2] == b"MZ", "Missing DOS header"
@@ -44,7 +50,7 @@ def verify(path: Path) -> None:
         descriptor += 20
     external_crt = [name for name in libraries if name.startswith(("vcruntime", "msvcp", "msvcr"))]
     assert not external_crt, f"Portable package depends on VC++ redistributable: {external_crt}"
-    print("Verified ZIP checksum, notices, x64 GUI executable, DPI manifest, and static VC++ runtime.")
+    print("Verified ZIP checksum, dependency/font notices, x64 GUI executable, DPI manifest, and static VC++ runtime.")
 
 
 if __name__ == "__main__":

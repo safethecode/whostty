@@ -20,6 +20,8 @@ try {
     Copy-Item 'context/LICENSE' $PackagePath -Force
     & cargo about generate --locked -o "$PackagePath/THIRD_PARTY_LICENSES.html" context/third-party-licenses.hbs
     if ($LASTEXITCODE -ne 0) { throw 'License notice generation failed. Install cargo-about 0.9.2 with the cli feature.' }
+    & python scripts/write_font_notices.py "$PackagePath/EMBEDDED_FONT_LICENSES.txt"
+    if ($LASTEXITCODE -ne 0) { throw 'Embedded font notice generation failed.' }
     $Archive = Join-Path $ProjectRoot 'dist/whostty-windows-x64.zip'
     Compress-Archive -Path "$PackagePath/*" -DestinationPath $Archive -Force
     $Hash = (Get-FileHash -Algorithm SHA256 $Archive).Hash.ToLowerInvariant()

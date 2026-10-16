@@ -13,7 +13,7 @@ Ghostty와의 성능·호환성 동등성은 검증하지 않았다.
 
 GitHub Actions의 **Windows package** 워크플로에서 main의 성공한 실행을 열고
 `whostty-windows-x64` 아티팩트를 다운로드한다. 아티팩트 안의 `whostty-windows-x64.zip`을 다시 풀고
-`whostty.exe`를 실행한다. ZIP에는 Whostty MIT 라이선스와 의존성 라이선스 고지가 동봉된다.
+`whostty.exe`를 실행한다. ZIP에는 Whostty MIT 라이선스, 의존성 라이선스 HTML, 기본 내장 폰트 4개의 원문 고지·메타데이터를 모은 EMBEDDED_FONT_LICENSES.txt가 동봉된다.
 코드 서명과 자동 업데이트는 아직 없다. 대상은 Windows x64이며 ARM64 패키지는 만들지 않는다.
 아티팩트 보존 기간은 14일이다. 만료되면 워크플로의 Run workflow로 main에서 새로 빌드한다.
 Windows package는 ZIP의 실행 파일을 꺼내 `--check`로 네이티브 PTY·shaped glyph 경로·화면 GPU readback을 검사하며
@@ -57,7 +57,7 @@ cargo run --locked --package whostty
 실제 GPU 화면 readback으로 확인한 뒤 JSON을 출력하고 닫는다. 실패하면 종료 코드가 0이 아니다.
 다른 실행 오버라이드와 함께 사용할 수 없다. 기본 프로필·사용자 글꼴·IME나 전체 GUI 기능을 검사하는 모드는 아니다.
 
-CI와 같은 휴대용 ZIP을 만들려면 PowerShell 7에서 실행한다:
+CI와 같은 휴대용 ZIP을 만들려면 Python 3.9 이상과 PowerShell 7을 설치한 뒤 실행한다:
 
 ```powershell
 rustup target add x86_64-pc-windows-msvc
@@ -67,7 +67,8 @@ cargo install cargo-about --version 0.9.2 --locked --features cli
 
 산출물은 `dist/whostty-windows-x64.zip` 및 SHA256 파일이다. 라이선스 고지 생성이 실패하면 패키징도 실패한다.
 배포 스크립트는 VC++ 런타임을 정적으로 링크한다. CI는 생성된 PE 파일의 import table을 검사해 VC++ 재배포 패키지 의존성이 없는지 확인한다.
-빌드/테스트만 할 때는 cargo-about이나 PowerShell 7이 필요하지 않다.
+폰트 고지는 Cargo.lock으로 해석한 실제 epaint_default_fonts에서 만들며, 폰트 목록이나 고지가 누락되면 패키징이 실패한다.
+앱 소스 빌드만 할 때는 cargo-about·Python·PowerShell 7이 필요하지 않다. Rust 검사 외에 Python 검사를 실행하려면 Python 3.9 이상이 필요하다.
 
 ## 프로필 및 설정
 
