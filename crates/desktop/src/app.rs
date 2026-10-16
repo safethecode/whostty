@@ -320,7 +320,7 @@ impl Whostty {
     }
 
     fn keyboard(&mut self, ctx: &egui::Context, events: &[egui::Event], focused: bool) {
-        let mut text_modifiers = ctx.input(|input| input.modifiers);
+        let mut text_modifiers = None;
         for event in events {
             if let egui::Event::Key {
                 key,
@@ -329,7 +329,7 @@ impl Whostty {
                 ..
             } = event
             {
-                text_modifiers = *modifiers;
+                text_modifiers = Some(*modifiers);
                 if modifiers.ctrl && modifiers.shift && *key == egui::Key::T {
                     self.open_profile(self.settings.default_profile, ctx);
                     continue;
@@ -398,7 +398,10 @@ impl Whostty {
                     // The backend already filters command text. Its committed text event is
                     // authoritative, even when the frame ends with different modifier keys.
                     let mut bytes = text.as_bytes().to_vec();
-                    if text_modifiers.alt && !text_modifiers.ctrl {
+                    if text_modifiers
+                        .take()
+                        .is_some_and(|modifiers| modifiers.alt && !modifiers.ctrl)
+                    {
                         bytes.insert(0, 0x1b);
                     }
                     self.send(bytes);
