@@ -125,3 +125,8 @@ Windows package는 압축한 exe를 다시 꺼내 이 검사를 실행한다. �
 설정 파일이 생기지 않았는지 검사한다. JSON에 backend/device type을 기록하므로 software adapter와 실제 하드웨어를 구분할 수 있다.
 Mac 실제 실행 결과: Apple M3 Pro/Metal, 1600×1000 readback, probe 색상 3560픽셀, PTY·renderer 성공, 설정 미생성.
 이 결과를 실제 입력 지연·성능 비교나 Windows 실기기 조작 검증으로 표현하지 않는다.
+
+현재 작업 디렉터리는 bounded OSC 7/9;9 observer로 추적한다. 로컬 file URI만 허용하고 경로의 제어 문자·네트워크/장치 경로를 거부한다.
+새 탭은 명시 시작 디렉터리가 없는 동일 실행 환경에서, 분할은 활성 패널에서 디렉터리를 계승한다. 기본 PowerShell 프로필의 자식 셸
+프롬프트를 감싸 기존 프롬프트 출력을 먼저 얻은 뒤 OSC를 출력한다. 사용자 프로필 파일이나 실행 정책은 변경하지 않는다.
+기존 설정은 shell_integration=false를 유지하며 opt-in할 수 있다. 직접 명령 실행은 연동을 끈다. WSL/SSH 경로 변환은 후속 작업이다.

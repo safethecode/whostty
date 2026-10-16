@@ -84,6 +84,7 @@ font_size = 15.0
 theme = "dark" # or "light"
 scrollback = 10000
 default_profile = 0
+inherit_working_directory = true
 # font_path = 'C:\Windows\Fonts\consola.ttf'
 # font_bold_path = 'C:\Windows\Fonts\consolab.ttf'
 # font_italic_path = 'C:\Windows\Fonts\consolai.ttf'
@@ -93,6 +94,7 @@ default_profile = 0
 name = "PowerShell"
 program = "powershell.exe"
 args = ["-NoLogo"]
+shell_integration = true
 # working_directory = 'C:\dev'
 
 [[profiles]]
@@ -100,6 +102,16 @@ name = "Ubuntu"
 program = "wsl.exe"
 args = ["-d", "Ubuntu", "--cd", "~"]
 ```
+
+새 기본 PowerShell 프로필은 `shell_integration = true`다. 기존 설정에서는 기본값이 false이므로 위 값을 직접 추가한 후 재로드하면 새 셸부터 적용한다.
+기존 PowerShell 프로필·프롬프트를 먼저 로드한 뒤 자식 셸 안에서 경로 보고만 감싼다. 프로필 파일·실행 정책을 수정하지 않는다.
+`-NoLogo`, `-NoProfile`, `-NoExit`만 있는 대화형 PowerShell 프로필에서 지원한다. `-e` 직접 실행에서는 자동으로 끈다.
+
+셸이 OSC 7 또는 OSC 9;9로 알린 로컬 디렉터리는 상태 표시줄에 나타난다. `+`/Ctrl+Shift+T와 분할은 같은 프로그램·인수의
+활성 셸 디렉터리를 계승한다. 새 탭 프로필에 명시한 `working_directory`와 메뉴에서 직접 선택한 프로필은 그 설정을 사용한다.
+Preferences에서 계승을 끌 수 있다. 보고가 없으면 시작 디렉터리를 사용하며, 없어진 디렉터리는 계승하지 않는다.
+원격 host의 file URI·네트워크/장치 경로·제어 문자는 계승하지 않는다. WSL/SSH 경로 변환과 Bash/Zsh 자동 주입은 아직 제공하지 않는다.
+WSL 기본 프로필은 Linux 홈에서 시작한다.
 
 기본 글꼴은 Cascadia Mono 또는 Consolas, 한글 대체 글꼴은 맑은 고딕을 로드한다.
 일반/굵게/기울임/굵은 기울임은 같은 글꼴 가족의 face를 선택하며 없으면 합성 스타일을 쓴다.
@@ -137,7 +149,8 @@ search = "#6b4f2a"
 11. 동기화 출력(2026) 종료 마커가 없는 앱도 약 150ms 기한 뒤 화면을 갱신해야 한다. TUI에서 좌/중/우 버튼 드래그 후 패널 밖에서 놓고, 창 포커스를 바꿨을 때 마우스가 눌린 상태로 남지 않는지 확인한다.
 12. 웹 URL 또는 OSC 8 링크 위에서 Ctrl을 누르면 실제 대상과 밑줄을 표시한다. Ctrl+클릭은 기본 브라우저로 열고 드래그·일반 클릭은 링크를 열지 않는다. file/임의 프로토콜 링크는 열지 않는다. TUI의 마우스 모드에서 Ctrl+클릭이 앱에 중복 전달되지 않는지 확인한다.
 13. Narrator에서 터미널 영역을 찾아 화면 텍스트·한글·결합 문자·커서/선택 위치를 읽는지 확인한다. 숨김(SGR 8) 텍스트는 접근성 값에도 나타나지 않아야 한다. 접근성 포커스로 다른 패널을 선택한 뒤 키 입력이 그 셸로 가는지 확인한다.
-14. Dark/Light/사용자 색상을 재로드·저장한 뒤 재실행한다. 분할 패널·선택·검색·커서·OSC 색 변경/리셋의 대비를 확인한다.
+14. PowerShell에서 한글·공백·따옴표가 있는 디렉터리로 이동한 뒤 상태 표시줄, 새 탭과 분할의 `Get-Location`을 확인한다. 기존 프롬프트의 오류 표시와 `$LASTEXITCODE`, 파일 시스템 외 provider, 계승 끄기, 명시 시작 경로를 확인한다.
+15. Dark/Light/사용자 색상을 재로드·저장한 뒤 재실행한다. 분할 패널·선택·검색·커서·OSC 색 변경/리셋의 대비를 확인한다.
 
 문제 보고에는 Windows 빌드 번호, GPU/드라이버, 화면 배율, 사용 프로필, 재현 명령, 현상·예상 결과를 기록한다.
 설정 파일이나 화면을 공유할 때 토큰·개인 경로 등은 제거한다.

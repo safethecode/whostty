@@ -61,6 +61,7 @@ pub struct Session {
     finished: Arc<AtomicBool>,
     exit: Arc<Mutex<Option<ExitState>>>,
     size: Size,
+    initial_directory: Option<std::path::PathBuf>,
 }
 
 impl Session {
@@ -78,13 +79,27 @@ impl Session {
         let mut writer = pair.master.take_writer()?;
         let mut command = CommandBuilder::new(&profile.program);
         command.args(&profile.args);
+        if profile.shell_integration {
+            anyhow::ensure!(
+                profile.supports_shell_integration(),
+                "Shell integration requires an interactive PowerShell profile"
+            );
+            if !profile
+                .args
+                .iter()
+                .any(|arg| arg.eq_ignore_ascii_case("-NoExit"))
+            {
+                command.arg("-NoExit");
+            }
+            command.arg("-Command");
+            command.arg(include_str!("../../../scripts/shell-integration.ps1"));
+        }
         command.env("TERM", "xterm-256color");
         command.env("COLORTERM", "truecolor");
         command.env("TERM_PROGRAM", "Whostty");
-        if let Some(directory) = &profile.working_directory {
+        let initial_directory = profile.working_directory.clone().or_else(dirs::home_dir);
+        if let Some(directory) = &initial_directory {
             command.cwd(directory);
-        } else if let Some(home) = dirs::home_dir() {
-            command.cwd(home);
         }
         let mut child = pair
             .slave
@@ -217,6 +232,7 @@ impl Session {
             finished,
             exit,
             size,
+            initial_directory,
         })
     }
 
@@ -252,6 +268,15 @@ impl Session {
         }
         self.size = size;
         Ok(())
+    }
+
+    pub fn working_directory(&self) -> Option<std::path::PathBuf> {
+        self.terminal
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .working_directory()
+            .map(std::path::Path::to_owned)
+            .or_else(|| self.initial_directory.clone())
     }
 
     pub fn size(&self) -> Size {
@@ -360,6 +385,91 @@ mod tests {
                 .try_iter()
                 .any(|event| matches!(event, SessionEvent::Exited(7)))
         });
+    }
+
+    #[test]
+    fn osc_directory_is_observed_through_the_native_pty() {
+        let directory = tempfile::tempdir().unwrap();
+        let target = directory.path().join("한글 space;%");
+        std::fs::create_dir(&target).unwrap();
+        let url = url::Url::from_directory_path(&target).unwrap();
+        #[cfg(windows)]
+        let profile = Profile::new(
+            "directory",
+            "powershell.exe",
+            &[
+                "-NoLogo",
+                "-NoProfile",
+                "-Command",
+                &format!("[Console]::Write(([string][char]27) + ']7;{url}' + [char]7); exit 0"),
+            ],
+        );
+        #[cfg(not(windows))]
+        let profile = Profile::new(
+            "directory",
+            "/bin/sh",
+            &[
+                "-c",
+                "printf '\\033]7;%s\\007' \"$1\"",
+                "check",
+                url.as_str(),
+            ],
+        );
+        let session = Session::spawn(&profile, Size::new(80, 24), 100, Arc::new(|| {})).unwrap();
+        wait_until(|| session.working_directory().as_ref() == Some(&target));
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn powershell_integration_reports_changed_unicode_directories() {
+        let directory = tempfile::tempdir().unwrap();
+        let target = directory.path().join("한글 space;%'quoted");
+        std::fs::create_dir(&target).unwrap();
+        let mut profile = Profile::new("integrated", "powershell.exe", &["-NoLogo", "-NoProfile"]);
+        profile.shell_integration = true;
+        profile.working_directory = Some(directory.path().to_owned());
+        let session = Session::spawn(&profile, Size::new(120, 24), 100, Arc::new(|| {})).unwrap();
+        // Inspect the OSC observer directly: Session's initial-directory fallback is not proof.
+        wait_until(|| {
+            session.terminal.lock().unwrap().working_directory() == Some(directory.path())
+        });
+        let command = format!(
+            "Set-Location -LiteralPath '{}'; [Console]::WriteLine('changed-directory')\r",
+            target.display().to_string().replace('\'', "''")
+        );
+        session.write(command.into_bytes()).unwrap();
+        wait_until(|| {
+            session.terminal.lock().unwrap().working_directory() == Some(target.as_path())
+        });
+        session.write(b"exit 0\r".to_vec()).unwrap();
+        wait_until(|| session.exit_state() == Some(ExitState::Exited(0)));
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn powershell_integration_preserves_the_existing_prompt_error_state() {
+        let directory = tempfile::tempdir().unwrap();
+        let script = format!("function global:prompt {{ 'original-state:' + $? + ':' + $global:LASTEXITCODE }}; {} ; $global:LASTEXITCODE = 23; Write-Error 'expected fixture error' -ErrorAction Continue; prompt; exit 0", include_str!("../../../scripts/shell-integration.ps1"));
+        let mut profile = Profile::new(
+            "prompt",
+            "powershell.exe",
+            &["-NoLogo", "-NoProfile", "-Command", &script],
+        );
+        profile.working_directory = Some(directory.path().to_owned());
+        let session = Session::spawn(&profile, Size::new(120, 24), 100, Arc::new(|| {})).unwrap();
+        wait_until(|| session.exit_state() == Some(ExitState::Exited(0)));
+        wait_until(|| {
+            session
+                .terminal
+                .lock()
+                .unwrap()
+                .text()
+                .contains("original-state:False:23")
+        });
+        assert_eq!(
+            session.terminal.lock().unwrap().working_directory(),
+            Some(directory.path())
+        );
     }
 
     #[test]
