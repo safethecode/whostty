@@ -777,7 +777,10 @@ impl Whostty {
                             (Action::IncreaseFont,"Larger text"), (Action::DecreaseFont,"Smaller text"), (Action::ResetFont,"Reset text size"),
                             (Action::ScrollPageUp,"Scroll page up"), (Action::ScrollPageDown,"Scroll page down"),
                         ] {
-                            ui.label(label); ui.label(self.shortcuts.label(action)); ui.end_row();
+                            ui.label(label);
+                            let binding = self.shortcuts.label(action);
+                            ui.label(if action == Action::Paste && binding == "Unbound" { "Ctrl+V / Ctrl+Shift+V".into() } else { binding });
+                            ui.end_row();
                         }
                     });
                 });

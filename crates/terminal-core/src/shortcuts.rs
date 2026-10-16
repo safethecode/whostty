@@ -148,7 +148,39 @@ impl Chord {
         if self.shift {
             parts.push("Shift");
         }
-        parts.push(&self.key);
+        let display_key = [
+            "Left",
+            "Right",
+            "Up",
+            "Down",
+            "Escape",
+            "Enter",
+            "Tab",
+            "Space",
+            "Backspace",
+            "Insert",
+            "Delete",
+            "Home",
+            "End",
+            "PageUp",
+            "PageDown",
+            "Plus",
+            "Equals",
+            "Minus",
+            "Comma",
+            "Period",
+            "Slash",
+            "Backslash",
+            "Semicolon",
+            "Quote",
+            "Backtick",
+            "OpenBracket",
+            "CloseBracket",
+        ]
+        .into_iter()
+        .find(|name| name.eq_ignore_ascii_case(&self.key))
+        .unwrap_or(&self.key);
+        parts.push(display_key);
         parts.join("+")
     }
 }
