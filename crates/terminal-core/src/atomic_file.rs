@@ -165,12 +165,14 @@ fn prepare_windows(target: &Path, replacement: &Path) -> Result<()> {
     let replacement = wide(replacement);
     // SAFETY: Both paths are terminated and valid for these calls.
     let attributes = unsafe { GetFileAttributesW(target.as_ptr()) };
+    if attributes == INVALID_FILE_ATTRIBUTES {
+        return Err(std::io::Error::last_os_error()).context("Read configuration attributes");
+    }
     let temporary_attributes = unsafe { GetFileAttributesW(replacement.as_ptr()) };
-    anyhow::ensure!(
-        attributes != INVALID_FILE_ATTRIBUTES && temporary_attributes != INVALID_FILE_ATTRIBUTES,
-        "Read configuration attributes: {}",
-        std::io::Error::last_os_error()
-    );
+    if temporary_attributes == INVALID_FILE_ATTRIBUTES {
+        return Err(std::io::Error::last_os_error())
+            .context("Read temporary configuration attributes");
+    }
     let special = FILE_ATTRIBUTE_ENCRYPTED | FILE_ATTRIBUTE_COMPRESSED | FILE_ATTRIBUTE_SPARSE_FILE;
     anyhow::ensure!(attributes & special == temporary_attributes & special, "Configuration uses encryption/compression attributes that cannot be preserved by this save");
     // Preserve owner/group/DACL before writing any configuration content into the temporary file.
@@ -203,17 +205,26 @@ fn replace_windows(file: tempfile::NamedTempFile, target: &Path) -> Result<()> {
     // Avoid ReplaceFile's backup-rename interval where concurrent readers observe NotFound.
     // Both paths are on the same volume; no copy/delete fallback or pre-deletion is allowed.
     // SAFETY: Owned temporary path and destination are terminated and live through the call.
-    if unsafe {
-        MoveFileExW(
-            source.as_ptr(),
-            target.as_ptr(),
-            MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH,
-        )
-    } == 0
-    {
-        return Err(std::io::Error::last_os_error()).context("Commit configuration");
+    for attempt in 0..16 {
+        if unsafe {
+            MoveFileExW(
+                source.as_ptr(),
+                target.as_ptr(),
+                MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH,
+            )
+        } != 0
+        {
+            return Ok(());
+        }
+        let error = std::io::Error::last_os_error();
+        // Open readers and scanners can temporarily prevent Windows from replacing a name.
+        // A failed rename leaves the original intact; retry only these transient outcomes.
+        if attempt == 15 || !matches!(error.raw_os_error(), Some(5 | 32)) {
+            return Err(error).context("Commit configuration");
+        }
+        std::thread::sleep(std::time::Duration::from_millis(5));
     }
-    Ok(())
+    unreachable!()
 }
 
 #[cfg(all(test, windows))]
@@ -221,39 +232,45 @@ mod tests {
     use super::*;
     use crate::config::Settings;
 
-    fn sddl(path: &Path) -> String {
-        use windows_sys::Win32::{
-            Foundation::LocalFree,
-            Security::Authorization::{
-                ConvertSecurityDescriptorToStringSecurityDescriptorW, SDDL_REVISION_1,
-            },
+    fn same_security(before: &Security, after: &Security) {
+        use windows_sys::Win32::Security::{
+            EqualSid, GetSecurityDescriptorControl, SE_DACL_PROTECTED,
         };
-        let security = Security::read(&wide(path)).unwrap();
-        let mut text = std::ptr::null_mut();
-        assert_ne!(
-            unsafe {
-                ConvertSecurityDescriptorToStringSecurityDescriptorW(
-                    security.descriptor,
-                    SDDL_REVISION_1,
-                    Security::INFO,
-                    &mut text,
-                    std::ptr::null_mut(),
-                )
-            },
-            0
-        );
-        let mut length = 0;
-        unsafe {
-            while *text.add(length) != 0 {
-                length += 1;
+        for (left, right) in [(before.owner, after.owner), (before.group, after.group)] {
+            if left.is_null() || right.is_null() {
+                assert_eq!(left, right);
+            } else {
+                assert_ne!(unsafe { EqualSid(left, right) }, 0);
             }
         }
-        let result =
-            String::from_utf16(unsafe { std::slice::from_raw_parts(text, length) }).unwrap();
-        unsafe {
-            LocalFree(text.cast());
-        }
-        result
+        let acl = |security: &Security| {
+            if security.dacl.is_null() {
+                return None;
+            }
+            Some(
+                unsafe {
+                    std::slice::from_raw_parts(
+                        security.dacl.cast::<u8>(),
+                        (*security.dacl).AclSize as usize,
+                    )
+                }
+                .to_vec(),
+            )
+        };
+        assert_eq!(acl(before), acl(after));
+        let protected = |security: &Security| {
+            let mut control = 0;
+            let mut revision = 0;
+            assert_ne!(
+                unsafe {
+                    GetSecurityDescriptorControl(security.descriptor, &mut control, &mut revision)
+                },
+                0
+            );
+            control & SE_DACL_PROTECTED != 0
+        };
+        // AUTO_INHERITED bookkeeping may be recomputed; principals, ACEs and protection must match.
+        assert_eq!(protected(before), protected(after));
     }
 
     #[test]
@@ -262,9 +279,9 @@ mod tests {
         let path = dir.path().join("config.toml");
         let mut settings = Settings::default();
         settings.save(&path).unwrap();
-        let original = sddl(&path);
+        let original = Security::read(&wide(&path)).unwrap();
         settings.font_size = 17.0;
         settings.save(&path).unwrap();
-        assert_eq!(sddl(&path), original);
+        same_security(&original, &Security::read(&wide(&path)).unwrap());
     }
 }
