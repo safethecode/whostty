@@ -147,3 +147,12 @@ TUI 휠 입력은 DEC 1007(Alternate Scroll)을 실제로 확인한다. 이를 �
 켰을 때만 대체 화면에서 normal/application cursor 시퀀스를 보낸다. 소수점 휠 누적은 TUI mouse/대체 화면/Shift
 대상이 바뀌거나 창 포커스를 잃으면 초기화해 이전 모드의 움직임이 다른 대상으로 새지 않게 한다.
 근거: [xterm Wheel mice](https://invisible-island.net/xterm/ctlseqs/ctlseqs.html#h2-Wheel-mice).
+
+IME 조합 중 창/터미널 포커스를 잃거나 Preferences·검색·닫기 창으로 입력 대상이 바뀌면 보류 중인 preedit를 해제한다.
+IME Disabled 이벤트도 GUI 입력 차단 여부와 무관하게 정리해, 돌아온 뒤 이전 조합이 Enter·단축키를 계속 막지 않게 한다.
+실제 Windows 한국어 IME 후보창·확정/취소 흐름의 조작 검증은 여전히 인계 항목이다.
+
+사용자의 계속 개발 요청 이후 PR #7–#17은 Windows/macOS 검사와 리뷰 기록을 거쳐 main에 병합했다.
+키 바인딩 최종 검증은 Mac 53개/Windows 55개 테스트와 배포 ZIP의 DX12/CPU readback을 통과했다.
+후속 TUI 휠·IME 정리는 각각 별도 PR이며, 아직 shaping/고급 키보드 프로토콜이나 Windows 실기기 검증을 완료한 상태는 아니다.
+남은 구현·검증 순서는 quality.md를 따른다.
