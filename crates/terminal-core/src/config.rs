@@ -13,6 +13,7 @@ pub struct Settings {
     pub font_bold_path: Option<PathBuf>,
     pub font_italic_path: Option<PathBuf>,
     pub font_bold_italic_path: Option<PathBuf>,
+    pub theme: crate::theme::Theme,
     pub profiles: Vec<Profile>,
 }
 
@@ -49,6 +50,7 @@ impl Default for Settings {
             font_bold_path: None,
             font_italic_path: None,
             font_bold_italic_path: None,
+            theme: Default::default(),
             profiles,
         }
     }
