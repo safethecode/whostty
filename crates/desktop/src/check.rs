@@ -84,11 +84,24 @@ impl CheckApp {
         });
         let rendered = image.is_some_and(|image| image.size[0] >= 200 && image.size[1] >= 100)
             && colored >= 20;
+        let (glyphs, layouts, runs) = fonts::Typography::get(ctx)
+            .shaping
+            .as_ref()
+            .map(|renderer| {
+                renderer
+                    .lock()
+                    .unwrap_or_else(|e| e.into_inner())
+                    .diagnostics()
+            })
+            .unwrap_or_default();
+        let shaped = glyphs > 0 && runs > 0;
         let error = error.or({
             if !pty {
                 Some("PTY probe did not complete successfully")
             } else if !rendered {
                 Some("GPU readback did not contain the colored PTY probe")
+            } else if !shaped {
+                Some("Shaped glyph renderer did not draw the PTY probe")
             } else {
                 None
             }
@@ -97,6 +110,10 @@ impl CheckApp {
         report["ok"] = json!(pty && rendered && error.is_none());
         report["pty"] = json!(pty);
         report["native_renderer"] = json!(rendered);
+        report["text_shaping"] = json!(shaped);
+        report["glyphs_cached"] = json!(glyphs);
+        report["pixels_per_point"] = json!(ctx.pixels_per_point());
+        report["layouts_cached"] = json!(layouts);
         report["image_size"] = json!(image.map(|image| image.size));
         report["colored_pixels"] = json!(colored);
         report["elapsed_ms"] = json!(self.started.elapsed().as_millis());

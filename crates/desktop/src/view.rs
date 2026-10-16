@@ -449,13 +449,7 @@ pub fn show(
             painter.rect_filled(Rect::from_min_size(pos, cell), 0.0, bg);
         }
     }
-    for indexed in &state.cells {
-        let row = indexed.point.line.0 + offset as i32;
-        if row < 0 || row as usize >= size.rows {
-            continue;
-        }
-        let pos = rect.min + Vec2::new(indexed.point.column.0 as f32 * cell.x, row as f32 * cell.y);
-        let cell_rect = Rect::from_min_size(pos, cell);
+    let text_color = |indexed: &Indexed<Cell>| {
         let flags = indexed.flags;
         let mut fg = color(theme.resolve(
             if flags.contains(Flags::INVERSE) {
@@ -468,13 +462,104 @@ pub fn show(
         if flags.contains(Flags::DIM) {
             fg = fg.gamma_multiply(0.6);
         }
-        let cursor_cell =
-            offset == 0 && cursor_covers(indexed.point) && mode.contains(TermMode::SHOW_CURSOR);
-        if cursor_cell && focused && cursor.shape == CursorShape::Block {
+        if offset == 0
+            && cursor_covers(indexed.point)
+            && mode.contains(TermMode::SHOW_CURSOR)
+            && focused
+            && cursor.shape == CursorShape::Block
+        {
             fg = background;
         }
-        if !flags
-            .intersects(Flags::WIDE_CHAR_SPACER | Flags::LEADING_WIDE_CHAR_SPACER | Flags::HIDDEN)
+        fg
+    };
+    let mut shaped = vec![false; state.cells.len()];
+    if let Some(renderer) = &typography.shaping {
+        let mut renderer = renderer.lock().unwrap_or_else(|e| e.into_inner());
+        let mut start = 0;
+        while start < state.cells.len() {
+            let first = &state.cells[start];
+            let row = first.point.line.0 + offset as i32;
+            if row < 0
+                || row as usize >= size.rows
+                || first.flags.intersects(
+                    Flags::HIDDEN | Flags::WIDE_CHAR_SPACER | Flags::LEADING_WIDE_CHAR_SPACER,
+                )
+            {
+                start += 1;
+                continue;
+            }
+            let style = first.flags & (Flags::BOLD | Flags::ITALIC);
+            let fg = text_color(first);
+            let column = first.point.column.0;
+            let mut run = crate::shaping::Run::default();
+            let mut end = start;
+            while let Some(indexed) = state.cells.get(end) {
+                if indexed.point.line != first.point.line
+                    || indexed
+                        .flags
+                        .intersects(Flags::HIDDEN | Flags::LEADING_WIDE_CHAR_SPACER)
+                    || indexed.flags & (Flags::BOLD | Flags::ITALIC) != style
+                    || text_color(indexed) != fg
+                {
+                    break;
+                }
+                if !indexed.flags.contains(Flags::WIDE_CHAR_SPACER) {
+                    let column = indexed.point.column.0 - column;
+                    run.stops.push(crate::shaping::Stop {
+                        byte: run.text.len(),
+                        column,
+                    });
+                    run.text.push(if indexed.c.is_control() {
+                        ' '
+                    } else {
+                        indexed.c
+                    });
+                    if let Some(zero) = indexed.zerowidth() {
+                        run.text.extend(zero);
+                    }
+                    run.columns = column
+                        + if indexed.flags.contains(Flags::WIDE_CHAR) {
+                            2
+                        } else {
+                            1
+                        };
+                }
+                end += 1;
+            }
+            let (format, synthetic_bold) = typography.format(style, font_size, fg);
+            if renderer.paint(
+                &painter,
+                crate::shaping::Paint {
+                    run: &run,
+                    pos: rect.min + Vec2::new(column as f32 * cell.x, row as f32 * cell.y),
+                    size: font_size,
+                    cell_width: cell.x,
+                    style: usize::from(style.contains(Flags::BOLD))
+                        + 2 * usize::from(style.contains(Flags::ITALIC)),
+                    color: fg,
+                    ligatures: typography.ligatures,
+                    synthetic_bold,
+                    synthetic_italic: format.italics,
+                },
+            ) {
+                shaped[start..end].fill(true);
+            }
+            start = end;
+        }
+    }
+    for (index, indexed) in state.cells.iter().enumerate() {
+        let row = indexed.point.line.0 + offset as i32;
+        if row < 0 || row as usize >= size.rows {
+            continue;
+        }
+        let pos = rect.min + Vec2::new(indexed.point.column.0 as f32 * cell.x, row as f32 * cell.y);
+        let cell_rect = Rect::from_min_size(pos, cell);
+        let flags = indexed.flags;
+        let fg = text_color(indexed);
+        if !shaped[index]
+            && !flags.intersects(
+                Flags::WIDE_CHAR_SPACER | Flags::LEADING_WIDE_CHAR_SPACER | Flags::HIDDEN,
+            )
             && indexed.c != ' '
         {
             let mut text = indexed.c.to_string();

@@ -16,7 +16,7 @@ GitHub Actions의 **Windows package** 워크플로에서 main의 성공한 실�
 `whostty.exe`를 실행한다. ZIP에는 Whostty MIT 라이선스와 의존성 라이선스 고지가 동봉된다.
 코드 서명과 자동 업데이트는 아직 없다. 대상은 Windows x64이며 ARM64 패키지는 만들지 않는다.
 아티팩트 보존 기간은 14일이다. 만료되면 워크플로의 Run workflow로 main에서 새로 빌드한다.
-Windows package는 ZIP의 실행 파일을 꺼내 `--check`로 네이티브 PTY·화면 GPU readback을 검사하며
+Windows package는 ZIP의 실행 파일을 꺼내 `--check`로 네이티브 PTY·shaped glyph 경로·화면 GPU readback을 검사하며
 결과 JSON도 아티팩트에 포함한다. CI 가상 장비의 검사를 실제 PC의 IME·DPI·WSL·입력 지연 검증으로 해석하지 않는다.
 
 GitHub CLI를 사용하는 경우:
@@ -81,6 +81,7 @@ PowerShell 7과 WSL은 해당 프로그램이 설치돼 있어야 한다. 기본
 
 ```toml
 font_size = 15.0
+font_ligatures = true
 theme = "dark" # or "light"
 scrollback = 10000
 default_profile = 0
@@ -177,7 +178,8 @@ search = "#6b4f2a"
 13. Narrator에서 터미널 영역을 찾아 화면 텍스트·한글·결합 문자·커서/선택 위치를 읽는지 확인한다. 숨김(SGR 8) 텍스트는 접근성 값에도 나타나지 않아야 한다. 접근성 포커스로 다른 패널을 선택한 뒤 키 입력이 그 셸로 가는지 확인한다.
 14. PowerShell에서 한글·공백·따옴표가 있는 디렉터리로 이동한 뒤 상태 표시줄, 새 탭과 분할의 `Get-Location`을 확인한다. 기존 프롬프트의 오류 표시와 `$LASTEXITCODE`, 파일 시스템 외 provider, 계승 끄기, 명시 시작 경로를 확인한다.
 15. 키 바인딩을 변경·해제하고 재로드한다. tooltip과 Preferences 목록, TUI 전달, IME 조합 중 단축키, 키를 길게 눌렀을 때 새 탭/분할/닫기가 반복되지 않는지 확인한다.
-16. Dark/Light/사용자 색상을 재로드·저장한 뒤 재실행한다. 분할 패널·선택·검색·커서·OSC 색 변경/리셋의 대비를 확인한다.
+16. ligature 지원 글꼴을 설정하고 `-> => != ===`와 결합 부호를 표시한 뒤 Font ligatures를 켜고 끈다. 커서 이동·선택·검색·복사와 100/150/200% DPI에서 원문과 셀 좌표가 유지돼야 한다.
+17. Dark/Light/사용자 색상을 재로드·저장한 뒤 재실행한다. 분할 패널·선택·검색·커서·OSC 색 변경/리셋의 대비를 확인한다.
 
 문제 보고에는 Windows 빌드 번호, GPU/드라이버, 화면 배율, 사용 프로필, 재현 명령, 현상·예상 결과를 기록한다.
 설정 파일이나 화면을 공유할 때 토큰·개인 경로 등은 제거한다.
@@ -190,9 +192,13 @@ cargo clippy --workspace --all-targets --locked -- -D warnings
 cargo test --workspace --locked
 ```
 
-현재 구현은 SSH 관리, 세션 복구, 이미지 프로토콜, ligature/복합 문자 shaping,
+현재 구현은 SSH 관리, 세션 복구, 이미지 프로토콜, RTL/bidi·색상 emoji,
 완전한 접근성, 자동 업데이트를 제공하지 않는다. 이중·물결·점선·파선 및 밑줄 색상을 지원한다.
-셀 내 문자열은 NFC로 정규화해 합성 가능한 결합 문자를 표시하지만 ligature/복합 shaping은 아직 지원하지 않는다.
+LTR 텍스트는 Rustybuzz로 OpenType ligature/mark 위치를 계산하고 glyph ID를 atlas에 그린다. 셀 좌표는 그대로 유지한다.
+글꼴에 해당 OpenType 기능이 있어야 모양이 바뀐다. Preferences의 Font ligatures는 즉시 적용되고 Save preferences로 저장한다.
+`font_ligatures = false`도 mark 배치를 유지한다. 행·색/스타일·커서 경계에서 run을 나누고, 폰트·문자군별로 shaping한다.
+RTL/bidi, bitmap/color/SVG glyph, 과도하게 긴 run 및 atlas가 찬 pass에서는 기존 셀 렌더러를 사용한다.
+전체 복합 문자·emoji 호환성을 달성했다는 뜻은 아니다. 기존 fallback은 표시할 때 NFC 정규화를 유지한다.
 ANSI·대체 화면 엔진 지원과 각 TUI의 전체 호환성은 구분한다. macOS의 파서·검색·셀 복사 기준값은
 `context/performance.md`에 기록했다. Windows 실기기의 입력 지연·GPU 프레임 시간은 아직 측정하지 않았다.
 

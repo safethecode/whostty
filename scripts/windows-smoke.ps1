@@ -17,3 +17,5 @@ try {
     Read-Host 'Press Enter to restore the normal screen'
 } finally { [Console]::Write("$Escape[?1049l$Escape[0m") }
 Write-Host 'Normal screen restored. Test Ctrl+C with: Start-Sleep 60'
+
+Write-Host "Ligatures (font-dependent): -> => != === <= >= <=> fi ffi"

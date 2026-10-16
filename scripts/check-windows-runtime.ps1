@@ -32,7 +32,7 @@ try {
     $stderr = $stderrTask.GetAwaiter().GetResult()
     if ($nativeCheckProcess.ExitCode -ne 0) { throw "Native runtime check failed: $stderr $stdout" }
     $runtimeReport = $stdout.Trim() | ConvertFrom-Json
-    if (-not $runtimeReport.ok -or -not $runtimeReport.pty -or -not $runtimeReport.native_renderer -or $runtimeReport.colored_pixels -lt 20) {
+    if (-not $runtimeReport.ok -or -not $runtimeReport.pty -or -not $runtimeReport.native_renderer -or -not $runtimeReport.text_shaping -or $runtimeReport.colored_pixels -lt 20) {
         throw "Native runtime check did not verify the PTY and rendered pixels: $stdout"
     }
     if (Test-Path -LiteralPath $startInfo.Environment['WHOSTTY_CONFIG']) { throw 'Runtime check wrote user configuration' }
