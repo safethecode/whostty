@@ -345,6 +345,19 @@ pub fn show(
     } = capture(term, state);
     // Text layout and GPU shape construction must not hold up PTY parsing.
     drop(terminal);
+    crate::accessibility::update(
+        ui.ctx(),
+        response.id,
+        rect,
+        cell,
+        &state.cells,
+        crate::accessibility::Display {
+            offset,
+            size,
+            cursor: cursor.point,
+            selection,
+        },
+    );
     let response = if let Some(link) = &hovered_link {
         response
             .on_hover_cursor(egui::CursorIcon::PointingHand)

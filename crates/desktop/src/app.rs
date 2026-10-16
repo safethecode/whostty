@@ -951,7 +951,10 @@ impl eframe::App for Whostty {
                                 &mut pane.view,
                                 self.search_open.then_some(&pane.search),
                             );
-                            if result.response.clicked() || result.response.drag_started() {
+                            if result.response.clicked()
+                                || result.response.drag_started()
+                                || result.response.gained_focus()
+                            {
                                 clicked = Some(id);
                             }
                             if result.response.has_focus() {
