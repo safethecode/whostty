@@ -1,6 +1,8 @@
 """Regenerate the original synthetic OpenType test font (fontTools 4.54.1)."""
 from pathlib import Path
 from fontTools.fontBuilder import FontBuilder
+from fontTools.ttLib import newTable
+from fontTools.ttLib.tables.S_V_G_ import SVGDocument
 from fontTools.pens.ttGlyphPen import TTGlyphPen
 from fontTools.feaLib.builder import addOpenTypeFeaturesFromString
 
@@ -31,6 +33,8 @@ feature liga { sub f i by fi; } liga;
 markClass acute <anchor 0 0> @top;
 feature mark { pos base e <anchor 300 750> mark @top; } mark;
 ''')
+font.font['SVG '] = newTable('SVG ')
+font.font['SVG '].docList = [SVGDocument('<svg xmlns="http://www.w3.org/2000/svg"><path fill="red" d="M0 0h100v100z"/></svg>', 0, 0)]
 font.font['head'].created = font.font['head'].modified = 3800000000
 font.font.recalcTimestamp = False
 font.save(Path(__file__).resolve().parents[1] / 'crates/desktop/tests/fixtures/shaping.ttf')

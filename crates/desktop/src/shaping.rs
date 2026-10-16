@@ -122,19 +122,19 @@ impl Atlas {
             return None;
         }
         let data = &sources[key.source];
+        // A color/SVG/bitmap glyph can also contain a monochrome outline. Keep the
+        // complete glyph on the existing fallback path until those formats are supported.
+        let face = ttf_parser::Face::parse(&data.font, data.index).ok()?;
+        let id = ttf_parser::GlyphId(key.id);
+        if face.is_color_glyph(id)
+            || face.glyph_svg_image(id).is_some()
+            || face.glyph_raster_image(id, key.size).is_some()
+        {
+            return None;
+        }
         let font = ab_glyph::FontRef::try_from_slice_and_index(&data.font, data.index).ok()?;
         let outline = font.outline_glyph(ab_glyph::GlyphId(key.id).with_scale(key.size as f32));
         let Some(outline) = outline else {
-            // Spaces/format glyphs are intentionally blank. Color/bitmap-only fonts use the
-            // ordinary egui fallback; do not report an unsupported glyph as rendered.
-            let face = ttf_parser::Face::parse(&data.font, data.index).ok()?;
-            let id = ttf_parser::GlyphId(key.id);
-            if face.is_color_glyph(id)
-                || face.glyph_svg_image(id).is_some()
-                || face.glyph_raster_image(id, key.size).is_some()
-            {
-                return None;
-            }
             // OpenType contextual ligatures can emit blank, advancing placeholder glyphs.
             // Absence of outlines AND bitmap/color/SVG data means intentional empty ink.
             self.glyphs.insert(key, None);
@@ -639,6 +639,19 @@ mod tests {
     fn glyph_ids_are_rasterized_and_cached_without_reuploading_unchanged_text() {
         let ctx = egui::Context::default();
         let mut renderer = renderer();
+        // The SVG fixture also has a monochrome outline; it must not be misrepresented.
+        assert!(renderer
+            .atlas
+            .glyph(
+                &ctx,
+                &renderer.sources,
+                GlyphKey {
+                    source: 0,
+                    id: 0,
+                    size: 28
+                }
+            )
+            .is_none());
         let run = Run {
             text: "fi e\u{301}\u{2007}".into(),
             stops: vec![
