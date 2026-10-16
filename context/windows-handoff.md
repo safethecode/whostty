@@ -83,7 +83,7 @@ args = ["-d", "Ubuntu", "--cd", "~"]
 ## Windows 실기기 검증
 
 1. PowerShell에서 `Get-Location`, `Get-ChildItem`, 한글 입력·삭제·복사·붙여넣기, Ctrl+C 프로세스 중단을 확인한다.
-2. Ctrl+Shift+T, Ctrl+Tab/Shift+Ctrl+Tab, Ctrl+Shift+W로 탭 생성·이동·닫기 및 닫기 취소를 확인한다.
+2. Ctrl+Shift+T, Ctrl+Tab/Shift+Ctrl+Tab으로 탭 생성·이동을 확인한다. Ctrl+Shift+D/E로 중첩 분할하고 Ctrl+Alt+방향키로 포커스를 이동한다. Ctrl+Shift+W는 활성 패널을 닫고, 탭의 닫기 버튼은 탭 전체를 닫는다. 닫기 취소와 패널 구분선 드래그·더블 클릭을 확인한다.
 3. Ctrl+Shift+C/V 또는 Ctrl+V로 복사·붙여넣기를 확인한다. 선택이 없을 때 Ctrl+C는 셸에 중단 문자를 보낸다.
 4. 터미널 안에서 `& C:\path\to\Whostty\scripts\windows-smoke.ps1`을 실행해 색·한글·대체 화면·스크롤백을 확인한다.
 5. 창을 계속 리사이즈하고 100/150/200% 배율 모니터 사이로 옮겨 그리드와 글꼴이 맞는지 확인한다.
