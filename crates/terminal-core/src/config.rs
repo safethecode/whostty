@@ -86,10 +86,7 @@ impl Settings {
 
     pub fn save(&self, path: &Path) -> Result<()> {
         self.validate()?;
-        if let Some(parent) = path.parent().filter(|path| !path.as_os_str().is_empty()) {
-            std::fs::create_dir_all(parent)?;
-        }
-        std::fs::write(path, toml::to_string_pretty(self)?)?;
+        crate::atomic_file::write(path, toml::to_string_pretty(self)?.as_bytes())?;
         Ok(())
     }
 
@@ -137,5 +134,82 @@ mod tests {
         std::fs::write(&path, "font_size = 'bad'").unwrap();
         assert!(Settings::load(&path).is_err());
         assert_eq!(std::fs::read_to_string(path).unwrap(), "font_size = 'bad'");
+    }
+
+    #[test]
+    fn repeated_saves_expose_only_complete_configs_to_readers() {
+        use std::sync::{
+            atomic::{AtomicBool, Ordering},
+            Arc,
+        };
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("config.toml");
+        let mut settings = Settings::default();
+        settings.save(&path).unwrap();
+        let done = Arc::new(AtomicBool::new(false));
+        let reader_done = done.clone();
+        let reader_path = path.clone();
+        let reader = std::thread::spawn(move || {
+            while !reader_done.load(Ordering::Acquire) {
+                let text = std::fs::read_to_string(&reader_path).unwrap();
+                let settings: Settings = toml::from_str(&text).expect("Partial config was visible");
+                settings.validate().unwrap();
+            }
+        });
+        let writes = (8..24).try_for_each(|size| {
+            settings.font_size = size as f32;
+            settings.save(&path)
+        });
+        done.store(true, Ordering::Release);
+        reader.join().unwrap();
+        writes.unwrap();
+        assert_eq!(Settings::load(&path).unwrap().font_size, 23.0);
+        assert_eq!(std::fs::read_dir(dir.path()).unwrap().count(), 1);
+        let original = std::fs::read(&path).unwrap();
+        settings.font_size = f32::NAN;
+        assert!(settings.save(&path).is_err());
+        assert_eq!(std::fs::read(&path).unwrap(), original);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn saves_preserve_user_config_symlinks_and_unix_modes() {
+        use std::os::unix::fs::{symlink, PermissionsExt};
+        let dir = tempfile::tempdir().unwrap();
+        let target = dir.path().join("managed.toml");
+        let link = dir.path().join("config.toml");
+        let mut settings = Settings::default();
+        settings.save(&target).unwrap();
+        std::fs::set_permissions(&target, std::fs::Permissions::from_mode(0o640)).unwrap();
+        symlink(&target, &link).unwrap();
+        settings.font_size = 18.0;
+        settings.save(&link).unwrap();
+        assert!(std::fs::symlink_metadata(&link)
+            .unwrap()
+            .file_type()
+            .is_symlink());
+        assert_eq!(Settings::load(&target).unwrap().font_size, 18.0);
+        assert_eq!(
+            std::fs::metadata(&target).unwrap().permissions().mode() & 0o777,
+            0o640
+        );
+    }
+
+    #[test]
+    fn read_only_configuration_is_preserved() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("config.toml");
+        let mut settings = Settings::default();
+        settings.save(&path).unwrap();
+        let original = std::fs::read(&path).unwrap();
+        let permissions = std::fs::metadata(&path).unwrap().permissions();
+        let mut read_only = permissions.clone();
+        read_only.set_readonly(true);
+        std::fs::set_permissions(&path, read_only).unwrap();
+        settings.font_size = 18.0;
+        let result = settings.save(&path);
+        std::fs::set_permissions(&path, permissions).unwrap();
+        assert!(result.is_err());
+        assert_eq!(std::fs::read(&path).unwrap(), original);
     }
 }

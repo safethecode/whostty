@@ -8,3 +8,4 @@ pub mod session;
 pub mod terminal;
 
 pub use alacritty_terminal;
+mod atomic_file;
