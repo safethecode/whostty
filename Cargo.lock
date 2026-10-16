@@ -3642,6 +3642,7 @@ dependencies = [
  "alacritty_terminal",
  "anyhow",
  "dirs",
+ "memchr",
  "portable-pty",
  "regex",
  "serde",

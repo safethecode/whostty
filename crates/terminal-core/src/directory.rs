@@ -27,8 +27,16 @@ impl Directory {
         self.current.as_deref()
     }
 
-    pub fn feed(&mut self, input: &[u8]) {
-        for &byte in input {
+    pub fn feed(&mut self, mut input: &[u8]) {
+        while !input.is_empty() {
+            if matches!(self.state, State::Ground) {
+                let Some(escape) = memchr::memchr(0x1b, input) else {
+                    return;
+                };
+                input = &input[escape..];
+            }
+            let byte = input[0];
+            input = &input[1..];
             self.state = match (&self.state, byte) {
                 // CAN and SUB cancel a control string without interpreting its contents.
                 (_, 0x18 | 0x1a) => State::Ground,

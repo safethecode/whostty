@@ -420,6 +420,18 @@ mod tests {
     }
 
     #[cfg(windows)]
+    fn reported_directory_matches(session: &Session, expected: &std::path::Path) -> bool {
+        // PowerShell expands Windows TEMP's 8.3 spelling and emits a trailing separator.
+        session
+            .terminal
+            .lock()
+            .unwrap()
+            .working_directory()
+            .and_then(|path| path.canonicalize().ok())
+            .is_some_and(|path| Some(path) == expected.canonicalize().ok())
+    }
+
+    #[cfg(windows)]
     #[test]
     fn powershell_integration_reports_changed_unicode_directories() {
         let directory = tempfile::tempdir().unwrap();
@@ -430,17 +442,13 @@ mod tests {
         profile.working_directory = Some(directory.path().to_owned());
         let session = Session::spawn(&profile, Size::new(120, 24), 100, Arc::new(|| {})).unwrap();
         // Inspect the OSC observer directly: Session's initial-directory fallback is not proof.
-        wait_until(|| {
-            session.terminal.lock().unwrap().working_directory() == Some(directory.path())
-        });
+        wait_until(|| reported_directory_matches(&session, directory.path()));
         let command = format!(
             "Set-Location -LiteralPath '{}'; [Console]::WriteLine('changed-directory')\r",
             target.display().to_string().replace('\'', "''")
         );
         session.write(command.into_bytes()).unwrap();
-        wait_until(|| {
-            session.terminal.lock().unwrap().working_directory() == Some(target.as_path())
-        });
+        wait_until(|| reported_directory_matches(&session, &target));
         session.write(b"exit 0\r".to_vec()).unwrap();
         wait_until(|| session.exit_state() == Some(ExitState::Exited(0)));
     }
@@ -466,10 +474,7 @@ mod tests {
                 .text()
                 .contains("original-state:False:23")
         });
-        assert_eq!(
-            session.terminal.lock().unwrap().working_directory(),
-            Some(directory.path())
-        );
+        assert!(reported_directory_matches(&session, directory.path()));
     }
 
     #[test]
