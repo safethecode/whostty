@@ -45,9 +45,14 @@ pub struct Whostty {
 }
 
 impl Whostty {
-    pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
-        let config_path = std::env::var_os("WHOSTTY_CONFIG")
-            .map(PathBuf::from)
+    pub fn new(
+        cc: &eframe::CreationContext<'_>,
+        launch: crate::launch::Launch,
+    ) -> Result<Self, std::io::Error> {
+        let config_path = launch
+            .config
+            .clone()
+            .or_else(|| std::env::var_os("WHOSTTY_CONFIG").map(PathBuf::from))
             .unwrap_or_else(Settings::path);
         let (settings, message, config_error) = match Settings::load(&config_path) {
             Ok(settings) => (settings, None, false),
@@ -57,6 +62,9 @@ impl Whostty {
                 true,
             ),
         };
+        let initial = launch
+            .initial_profile(&settings)
+            .map_err(std::io::Error::other)?;
         configure_style(&cc.egui_ctx);
         let font_error = configure_fonts(&cc.egui_ctx, &settings);
         let mut app = Self {
@@ -81,8 +89,8 @@ impl Whostty {
                 app.message = Some(format!("Create configuration: {error:#}"));
             }
         }
-        app.open_profile(app.settings.default_profile, &cc.egui_ctx);
-        app
+        app.open(initial, &cc.egui_ctx);
+        Ok(app)
     }
 
     fn open_profile(&mut self, index: usize, ctx: &egui::Context) {
