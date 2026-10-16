@@ -10,6 +10,9 @@ pub struct Settings {
     pub scrollback: usize,
     pub default_profile: usize,
     pub font_path: Option<PathBuf>,
+    pub font_bold_path: Option<PathBuf>,
+    pub font_italic_path: Option<PathBuf>,
+    pub font_bold_italic_path: Option<PathBuf>,
     pub profiles: Vec<Profile>,
 }
 
@@ -43,6 +46,9 @@ impl Default for Settings {
             scrollback: 10_000,
             default_profile: 0,
             font_path: None,
+            font_bold_path: None,
+            font_italic_path: None,
+            font_bold_italic_path: None,
             profiles,
         }
     }

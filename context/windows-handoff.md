@@ -63,7 +63,10 @@ PowerShell 7과 WSL은 해당 프로그램이 설치돼 있어야 한다. 기본
 font_size = 15.0
 scrollback = 10000
 default_profile = 0
-# font_path = 'C:\Windows\Fonts\CascadiaMono.ttf'
+# font_path = 'C:\Windows\Fonts\consola.ttf'
+# font_bold_path = 'C:\Windows\Fonts\consolab.ttf'
+# font_italic_path = 'C:\Windows\Fonts\consolai.ttf'
+# font_bold_italic_path = 'C:\Windows\Fonts\consolaz.ttf'
 
 [[profiles]]
 name = "PowerShell"
@@ -78,6 +81,8 @@ args = ["-d", "Ubuntu", "--cd", "~"]
 ```
 
 기본 글꼴은 Cascadia Mono 또는 Consolas, 한글 대체 글꼴은 맑은 고딕을 로드한다.
+일반/굵게/기울임/굵은 기울임은 같은 글꼴 가족의 face를 선택하며 없으면 합성 스타일을 쓴다.
+사용자 스타일 파일은 해당 스타일의 같은 monospace 가족이어야 한다. 개별 파일은 최대 64 MiB다.
 글꼴 크기와 프로필의 저장은 Preferences의 Save preferences로 명시적으로 수행한다.
 
 ## Windows 실기기 검증
@@ -106,7 +111,8 @@ cargo test --workspace --locked
 ```
 
 현재 구현은 SSH 관리, 세션 복구, 이미지 프로토콜, ligature/복합 문자 shaping,
-완전한 접근성, 자동 업데이트를 제공하지 않는다. 꾸밈 밑줄은 기본 밑줄로 표시하며 italic 렌더링은 후속 범위다.
+완전한 접근성, 자동 업데이트를 제공하지 않는다. 이중·물결·점선·파선 및 밑줄 색상을 지원한다.
+셀 내 문자열은 NFC로 정규화해 합성 가능한 결합 문자를 표시하지만 ligature/복합 shaping은 아직 지원하지 않는다.
 ANSI·대체 화면 엔진 지원과 각 TUI의 전체 호환성은 구분한다. macOS의 파서·검색·셀 복사 기준값은
 `context/performance.md`에 기록했다. Windows 실기기의 입력 지연·GPU 프레임 시간은 아직 측정하지 않았다.
 

@@ -77,3 +77,10 @@ PR #7은 macOS 24개/Windows 25개 테스트·Clippy·Windows 패키지 검증 �
 출력/리사이즈 revision이 달라진 작업은 결과를 적용하지 않는다. 검색은 종료된 패널의 터미널을 계속 소유하지 않는다.
 결합 부호와 wide 문자의 셀 좌표, 16행 경계를 가로지르는 soft wrap을 테스트한다.
 단일 soft-wrapped 논리 행은 256 KiB까지 검색하며, 넘으면 메모리를 무제한 늘리지 않고 오류를 표시한다.
+PR #8은 macOS 28개/Windows 29개 테스트·Clippy·Windows 패키지 검증 후 자체 리뷰와 함께 병합됐다.
+
+글꼴 스타일은 TTC face와 같은 가족의 monospace 파일을 선택한다. 사용자 bold/italic/bold-italic 경로를 지원하고
+없는 스타일은 합성한다. macOS는 한글 fallback도 로드하며, 셀 내 결합 문자는 표시할 때 NFC로 정규화한다.
+이중·물결·점선·파선 밑줄, 밑줄 색상, wide 문자 너비의 커서를 그린다.
+Mac 실제 창에서 네 가지 글꼴 스타일·밑줄 종류·한글 fallback·결합 문자와 동기화 출력 복구를 확인했다.
+임시 테스트 앱 번들과 설정은 /tmp에만 두었다. ligature/복합 shaping이나 Windows GUI 검증을 완료한 것은 아니다.

@@ -1,9 +1,10 @@
+use crate::fonts::configure_fonts;
 use crate::view::{self, ACCENT, BACKGROUND, FOREGROUND};
 use crate::{
     layout::{Axis, Direction, PaneId},
     workspace::{Pane, Tab},
 };
-use eframe::egui::{self, Color32, FontFamily, FontId, RichText, Vec2};
+use eframe::egui::{self, Color32, FontId, RichText, Vec2};
 use std::{path::PathBuf, sync::Arc};
 use whostty_core::{
     alacritty_terminal::{
@@ -57,7 +58,7 @@ impl Whostty {
             ),
         };
         configure_style(&cc.egui_ctx);
-        let font_error = configure_fonts(&cc.egui_ctx, settings.font_path.as_deref());
+        let font_error = configure_fonts(&cc.egui_ctx, &settings);
         let mut app = Self {
             settings,
             config_path,
@@ -681,7 +682,7 @@ impl Whostty {
                 }
                 if ui.button("Reload config").clicked() {
                     match Settings::load(&self.config_path) {
-                        Ok(settings) => { self.message = configure_fonts(ctx, settings.font_path.as_deref()); self.settings = settings; self.config_error = false; }
+                        Ok(settings) => { self.message = configure_fonts(ctx, &settings); self.settings = settings; self.config_error = false; }
                         Err(error) => { self.message = Some(format!("Reload configuration: {error:#}")); self.config_error = true; }
                     }
                 }
@@ -1123,77 +1124,6 @@ fn configure_style(ctx: &egui::Context) {
         style.spacing.button_padding = Vec2::new(8.0, 4.0);
         style.spacing.item_spacing = Vec2::new(8.0, 6.0);
     });
-}
-
-fn configure_fonts(ctx: &egui::Context, custom: Option<&std::path::Path>) -> Option<String> {
-    let mut fonts = egui::FontDefinitions::default();
-    let mut error = None;
-    let mut normal: Vec<PathBuf> = custom.into_iter().map(PathBuf::from).collect();
-    #[cfg(windows)]
-    {
-        let root =
-            PathBuf::from(std::env::var_os("WINDIR").unwrap_or_else(|| "C:\\Windows".into()))
-                .join("Fonts");
-        normal.extend([root.join("CascadiaMono.ttf"), root.join("consola.ttf")]);
-    }
-    #[cfg(target_os = "macos")]
-    normal.push(PathBuf::from("/System/Library/Fonts/Menlo.ttc"));
-    for path in normal {
-        match std::fs::read(&path) {
-            Ok(bytes) => {
-                if ttf_parser::Face::parse(&bytes, 0).is_err() {
-                    error = Some(format!("Unsupported font file: {}", path.display()));
-                    continue;
-                }
-                fonts
-                    .font_data
-                    .insert("terminal".into(), egui::FontData::from_owned(bytes).into());
-                fonts
-                    .families
-                    .get_mut(&FontFamily::Monospace)
-                    .unwrap()
-                    .insert(0, "terminal".into());
-                break;
-            }
-            Err(failure) if custom == Some(path.as_path()) => {
-                error = Some(format!("Load font {}: {failure}", path.display()))
-            }
-            Err(_) => {}
-        }
-    }
-    let bold = fonts.families[&FontFamily::Monospace].clone();
-    fonts
-        .families
-        .insert(FontFamily::Name("terminal-bold".into()), bold);
-    #[cfg(windows)]
-    {
-        let root =
-            PathBuf::from(std::env::var_os("WINDIR").unwrap_or_else(|| "C:\\Windows".into()))
-                .join("Fonts");
-        if custom.is_none() {
-            if let Ok(bytes) = std::fs::read(root.join("consolab.ttf")) {
-                fonts.font_data.insert(
-                    "terminal-bold-data".into(),
-                    egui::FontData::from_owned(bytes).into(),
-                );
-                fonts
-                    .families
-                    .get_mut(&FontFamily::Name("terminal-bold".into()))
-                    .unwrap()
-                    .insert(0, "terminal-bold-data".into());
-            }
-        }
-        if let Ok(bytes) = std::fs::read(root.join("malgun.ttf")) {
-            fonts
-                .font_data
-                .insert("cjk".into(), egui::FontData::from_owned(bytes).into());
-            for family in fonts.families.values_mut() {
-                family.push("cjk".into());
-            }
-        }
-    }
-    ctx.set_fonts(fonts);
-    error
 }
 
 #[cfg(test)]

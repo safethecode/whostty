@@ -4,7 +4,8 @@ Write-Host 'Whostty Windows manual smoke test'
 Write-Host ('Window: {0} columns x {1} rows' -f [Console]::WindowWidth, [Console]::WindowHeight)
 Write-Host "$Escape[31mRed $Escape[32mGreen $Escape[34mBlue$Escape[0m"
 Write-Host "$Escape[38;2;151;219;174mTruecolor green$Escape[0m"
-Write-Host "$Escape[1mBold$Escape[0m  $Escape[4mUnderline$Escape[0m"
+Write-Host "$Escape[1mBold$Escape[0m  $Escape[3mItalic$Escape[0m  $Escape[1;3mBold italic$Escape[0m"
+Write-Host "$Escape[58:2::255:120:120m$Escape[4mSingle$Escape[0m  $Escape[4:2mDouble$Escape[0m  $Escape[4:3mCurly$Escape[0m  $Escape[4:4mDotted$Escape[0m  $Escape[4:5mDashed$Escape[0m"
 Write-Host "Korean: 한글 입력 확인 / Wide: 가나다라마바사 / Combining: e$([char]0x301)"
 1..100 | ForEach-Object { Write-Host "Scrollback line $_" }
 Read-Host 'Scroll up and down, resize the window, then press Enter'
