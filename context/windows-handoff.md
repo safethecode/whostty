@@ -16,6 +16,8 @@ GitHub Actions의 **Windows package** 워크플로에서 main의 성공한 실�
 `whostty.exe`를 실행한다. ZIP에는 Whostty MIT 라이선스와 의존성 라이선스 고지가 동봉된다.
 코드 서명과 자동 업데이트는 아직 없다. 대상은 Windows x64이며 ARM64 패키지는 만들지 않는다.
 아티팩트 보존 기간은 14일이다. 만료되면 워크플로의 Run workflow로 main에서 새로 빌드한다.
+Windows package는 ZIP의 실행 파일을 꺼내 `--check`로 네이티브 PTY·화면 GPU readback을 검사하며
+결과 JSON도 아티팩트에 포함한다. CI 가상 장비의 검사를 실제 PC의 IME·DPI·WSL·입력 지연 검증으로 해석하지 않는다.
 
 GitHub CLI를 사용하는 경우:
 
@@ -43,12 +45,17 @@ cargo run --locked --package whostty
 .\whostty.exe --working-directory 'C:\dev' --profile 'PowerShell 7'
 .\whostty.exe --config 'C:\dev\whostty.toml' -e pwsh.exe -NoLogo
 .\whostty.exe --help
+.\whostty.exe --check
 ```
 
 `-e` 또는 `--` 뒤의 인수는 Whostty 옵션으로 해석하지 않고 프로그램에 그대로 전달한다.
 셸 문자열 평가를 자동으로 추가하지 않는다. 실행 옵션은 첫 탭에만 적용되며 설정 파일의 프로필을 바꾸지 않는다.
 도움말·버전·잘못된 옵션은 GUI를 만들지 않는다. Windows의 기존 콘솔과 출력 리다이렉션을 사용하고,
 콘솔 없이 직접 실행한 경우에는 메시지 창을 표시한다.
+
+`--check`는 사용자 설정을 읽거나 저장하지 않고 고정된 일회용 셸을 실행한다. 정상 종료와 표시된 색상 픽셀을
+실제 GPU 화면 readback으로 확인한 뒤 JSON을 출력하고 닫는다. 실패하면 종료 코드가 0이 아니다.
+다른 실행 오버라이드와 함께 사용할 수 없다. 기본 프로필·사용자 글꼴·IME나 전체 GUI 기능을 검사하는 모드는 아니다.
 
 CI와 같은 휴대용 ZIP을 만들려면 PowerShell 7에서 실행한다:
 

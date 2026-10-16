@@ -2,6 +2,7 @@
 
 mod accessibility;
 mod app;
+mod check;
 mod fonts;
 mod icon;
 mod launch;
@@ -25,10 +26,19 @@ fn main() {
             std::process::exit(2);
         }
     };
-    if let Err(error) = run(launch) {
-        let message = format!("Whostty could not start.\n\n{error}");
-        show_message(&message, true);
-        std::process::exit(1);
+    match run(launch) {
+        Ok(Some(report)) => {
+            show_message(&report.to_string(), false);
+            if report["ok"] != true {
+                std::process::exit(1);
+            }
+        }
+        Ok(None) => {}
+        Err(error) => {
+            let message = format!("Whostty could not start.\n\n{error}");
+            show_message(&message, true);
+            std::process::exit(1);
+        }
     }
 }
 
@@ -76,12 +86,24 @@ fn show_message(message: &str, error: bool) {
     }
 }
 
-fn run(launch: launch::Launch) -> eframe::Result {
+fn run(launch: launch::Launch) -> eframe::Result<Option<serde_json::Value>> {
+    let check = launch.check;
+    let output = check::Output::default();
+    let result = output.clone();
     let options = eframe::NativeOptions {
         renderer: eframe::Renderer::Wgpu,
         viewport: eframe::egui::ViewportBuilder::default()
-            .with_title("Whostty")
-            .with_inner_size([1120.0, 720.0])
+            .with_title(if check {
+                "Whostty runtime check"
+            } else {
+                "Whostty"
+            })
+            .with_inner_size(if check {
+                [800.0, 500.0]
+            } else {
+                [1120.0, 720.0]
+            })
+            .with_active(!check)
             .with_min_inner_size([480.0, 300.0])
             .with_icon(eframe::egui::IconData {
                 rgba: icon::rgba(),
@@ -93,6 +115,19 @@ fn run(launch: launch::Launch) -> eframe::Result {
     eframe::run_native(
         "Whostty",
         options,
-        Box::new(move |cc| Ok(Box::new(app::Whostty::new(cc, launch)?))),
-    )
+        Box::new(move |cc| {
+            if check {
+                Ok(Box::new(check::CheckApp::new(cc, output)?))
+            } else {
+                Ok(Box::new(app::Whostty::new(cc, launch)?))
+            }
+        }),
+    )?;
+    let report = result.lock().unwrap_or_else(|e| e.into_inner()).take();
+    if check && report.is_none() {
+        return Err(eframe::Error::AppCreation(
+            std::io::Error::other("Runtime check exited without a report").into(),
+        ));
+    }
+    Ok(report)
 }

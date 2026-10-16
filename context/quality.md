@@ -17,7 +17,7 @@ Ghostty의 주요 방향인 네이티브 UX, 탭·분할, 글자 처리, 다양�
 | 렌더링 | wgpu, 셀 스냅샷, 스타일 face·밑줄 장식·NFC, 폰트 fallback | ligature/복합 shaping, emoji, GPU 측정 |
 | 검색 | 백그라운드 취소·revision 검사·결합 부호/soft wrap 매칭 | 긴 단일 논리 행의 256 KiB 제한, Windows 실사용 |
 | 사용성 | 탭·중첩 분할·프로필·안전한 설정 저장·실행 옵션·웹 링크·테마 | 명령 탐색, 현재 작업 디렉터리 계승, 키 바인딩 |
-| 배포 | Windows ZIP·체크섬·고지·정적 CRT·CI | Windows 설치/업데이트·서명·ARM64, 실기기 설치/재실행 |
+| 배포 | Windows ZIP·체크섬·고지·정적 CRT·네이티브 PTY/GPU readback 진단 | Windows 설치/업데이트·서명·ARM64, 실기기 설치/재실행 |
 | 접근성 | Terminal/TextRun·화면 텍스트·문자 위치·커서·일반 선택·숨김 마스킹 | Narrator/VoiceOver 실사용, 자동 읽기·선택 수정·블록 선택 |
 
 Windows 실기기와 입력 지연·프레임 시간·메모리의 동일 조건 비교가 끝나기 전에는
