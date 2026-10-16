@@ -24,6 +24,7 @@ pub const ACCENT: Color32 = Color32::from_rgb(151, 219, 174);
 pub struct ViewState {
     wheel: f32,
     cells: Vec<Indexed<Cell>>,
+    mouse_buttons: u8,
 }
 
 struct Snapshot {
@@ -104,6 +105,9 @@ pub fn show(
     let term = &mut terminal.term;
     let mode = *term.mode();
     let mouse = mode.intersects(TermMode::MOUSE_MODE);
+    if !mouse {
+        state.mouse_buttons = 0;
+    }
     let wheel = &mut state.wheel;
     let events = ui.input(|input| input.events.clone());
     let shift = ui.input(|input| input.modifiers.shift);
@@ -158,31 +162,64 @@ pub fn show(
                 button,
                 pressed,
                 modifiers,
-            } if mouse && !modifiers.shift && rect.contains(*pos) => {
+            } if mouse => {
                 let code = match button {
                     egui::PointerButton::Primary => 0,
                     egui::PointerButton::Middle => 1,
                     egui::PointerButton::Secondary => 2,
                     _ => continue,
                 };
+                let mask = 1 << code;
+                if *pressed {
+                    if modifiers.shift || !rect.contains(*pos) {
+                        continue;
+                    }
+                    state.mouse_buttons |= mask;
+                    response.request_focus();
+                } else if state.mouse_buttons & mask != 0 {
+                    // Release belongs to the pane that accepted the press, even outside it
+                    // or after Shift was pressed during the drag.
+                    state.mouse_buttons &= !mask;
+                } else {
+                    continue;
+                }
                 let (column, row, _) = at(*pos);
                 if let Some(bytes) = mouse_report(code, column, row, *pressed, *modifiers, mode) {
                     input.push(bytes);
                 }
             }
-            egui::Event::PointerMoved(pos) if mouse && !shift && rect.contains(*pos) => {
-                let down = ui.input(|input| input.pointer.primary_down());
+            egui::Event::PointerMoved(pos)
+                if mouse && !shift && (rect.contains(*pos) || state.mouse_buttons != 0) =>
+            {
+                let down = state.mouse_buttons != 0;
                 if mode.contains(TermMode::MOUSE_MOTION)
                     || (down && mode.contains(TermMode::MOUSE_DRAG))
                 {
                     let (column, row, _) = at(*pos);
-                    let code = if down { 32 } else { 35 };
+                    let code = if down {
+                        32 + state.mouse_buttons.trailing_zeros() as u8
+                    } else {
+                        35
+                    };
                     if let Some(bytes) =
                         mouse_report(code, column, row, true, ui.input(|i| i.modifiers), mode)
                     {
                         input.push(bytes);
                     }
                 }
+            }
+            egui::Event::WindowFocused(false) => {
+                let (column, row, _) = at(pointer.unwrap_or(rect.min));
+                for code in 0..3 {
+                    if state.mouse_buttons & (1 << code) != 0 {
+                        if let Some(bytes) =
+                            mouse_report(code, column, row, false, Default::default(), mode)
+                        {
+                            input.push(bytes);
+                        }
+                    }
+                }
+                state.mouse_buttons = 0;
             }
             egui::Event::MouseWheel {
                 unit,
@@ -486,35 +523,18 @@ fn mouse_report(
     modifiers: egui::Modifiers,
     mode: TermMode,
 ) -> Option<Vec<u8>> {
-    let modifiers =
-        u8::from(modifiers.shift) * 4 + u8::from(modifiers.alt) * 8 + u8::from(modifiers.ctrl) * 16;
-    if mode.contains(TermMode::SGR_MOUSE) {
-        Some(
-            format!(
-                "\x1b[<{};{};{}{}",
-                button + modifiers,
-                column + 1,
-                row + 1,
-                if pressed { 'M' } else { 'm' }
-            )
-            .into_bytes(),
-        )
-    } else if column < 223 && row < 223 {
-        Some(vec![
-            27,
-            b'[',
-            b'M',
-            32 + if pressed {
-                button + modifiers
-            } else {
-                3 + modifiers
-            },
-            (column + 33) as u8,
-            (row + 33) as u8,
-        ])
-    } else {
-        None
-    }
+    whostty_core::mouse::encode_mouse(
+        button,
+        column,
+        row,
+        pressed,
+        whostty_core::input::Modifiers {
+            ctrl: modifiers.ctrl,
+            alt: modifiers.alt,
+            shift: modifiers.shift,
+        },
+        mode,
+    )
 }
 
 #[cfg(test)]
@@ -559,5 +579,96 @@ mod tests {
         capture(&terminal.term, &mut state);
         assert_eq!(state.cells[0].c, 'c');
         assert_eq!(state.cells.capacity(), capacity);
+    }
+
+    #[test]
+    fn tui_drag_captures_secondary_button_and_release_outside_the_pane() {
+        use std::{
+            sync::Arc,
+            time::{Duration, Instant},
+        };
+        use whostty_core::config::Profile;
+        #[cfg(windows)]
+        let profile = Profile::new(
+            "mouse",
+            "powershell.exe",
+            &[
+                "-NoLogo",
+                "-NoProfile",
+                "-Command",
+                "[Console]::Write('mouse-ready'); Start-Sleep 60",
+            ],
+        );
+        #[cfg(not(windows))]
+        let profile = Profile::new("mouse", "/bin/sh", &["-c", "printf mouse-ready; sleep 60"]);
+        let mut session =
+            Session::spawn(&profile, Size::new(40, 10), 100, Arc::new(|| {})).unwrap();
+        let deadline = Instant::now() + Duration::from_secs(15);
+        while !session
+            .terminal
+            .lock()
+            .unwrap()
+            .text()
+            .contains("mouse-ready")
+        {
+            assert!(Instant::now() < deadline);
+            std::thread::sleep(Duration::from_millis(20));
+        }
+        session
+            .terminal
+            .lock()
+            .unwrap()
+            .feed(b"\x1b[?1002h\x1b[?1006h");
+        let ctx = egui::Context::default();
+        let mut state = ViewState::default();
+        let mut frame = |events| {
+            let mut reports = Vec::new();
+            let _ = ctx.run(
+                egui::RawInput {
+                    screen_rect: Some(Rect::from_min_size(Pos2::ZERO, Vec2::new(600.0, 400.0))),
+                    events,
+                    ..Default::default()
+                },
+                |ctx| {
+                    egui::CentralPanel::default().show(ctx, |ui| {
+                        ui.scope_builder(
+                            egui::UiBuilder::new()
+                                .max_rect(Rect::from_min_size(Pos2::ZERO, Vec2::new(250.0, 180.0))),
+                            |ui| {
+                                reports.extend(
+                                    show(ui, &mut session, 15.0, "", false, &mut state, None).input,
+                                );
+                            },
+                        );
+                    });
+                },
+            );
+            reports
+        };
+        frame(vec![]);
+        let press = egui::Event::PointerButton {
+            pos: Pos2::new(40.0, 40.0),
+            button: egui::PointerButton::Secondary,
+            pressed: true,
+            modifiers: Default::default(),
+        };
+        assert!(frame(vec![press])
+            .iter()
+            .any(|bytes| bytes.starts_with(b"\x1b[<2;")));
+        assert!(
+            frame(vec![egui::Event::PointerMoved(Pos2::new(400.0, 40.0))])
+                .iter()
+                .any(|bytes| bytes.starts_with(b"\x1b[<34;"))
+        );
+        let release = egui::Event::PointerButton {
+            pos: Pos2::new(400.0, 40.0),
+            button: egui::PointerButton::Secondary,
+            pressed: false,
+            modifiers: egui::Modifiers::SHIFT,
+        };
+        assert!(frame(vec![release])
+            .iter()
+            .any(|bytes| bytes.starts_with(b"\x1b[<6;") && bytes.ends_with(b"m")));
+        assert!(frame(vec![egui::Event::PointerMoved(Pos2::new(420.0, 40.0))]).is_empty());
     }
 }

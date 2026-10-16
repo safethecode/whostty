@@ -1,3 +1,5 @@
+use alacritty_terminal::term::TermMode;
+
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Modifiers {
     pub shift: bool,
@@ -25,7 +27,7 @@ pub enum Key {
     Character(char),
 }
 
-pub fn encode_key(key: Key, mods: Modifiers, application_cursor: bool) -> Option<Vec<u8>> {
+pub fn encode_key(key: Key, mods: Modifiers, mode: TermMode) -> Option<Vec<u8>> {
     let modifier = 1 + u8::from(mods.shift) + 2 * u8::from(mods.alt) + 4 * u8::from(mods.ctrl);
     let sequence = match key {
         Key::Character(c) if mods.ctrl => {
@@ -43,7 +45,12 @@ pub fn encode_key(key: Key, mods: Modifiers, application_cursor: bool) -> Option
             });
         }
         Key::Character(_) => return None,
-        Key::Enter => "\r".into(),
+        Key::Enter => if mode.contains(TermMode::LINE_FEED_NEW_LINE) {
+            "\r\n"
+        } else {
+            "\r"
+        }
+        .into(),
         Key::Backspace => if mods.ctrl { "\x08" } else { "\x7f" }.into(),
         Key::Escape => "\x1b".into(),
         Key::Tab => if mods.shift { "\x1b[Z" } else { "\t" }.into(),
@@ -58,7 +65,7 @@ pub fn encode_key(key: Key, mods: Modifiers, application_cursor: bool) -> Option
             };
             if modifier > 1 {
                 format!("\x1b[1;{modifier}{final_char}")
-            } else if application_cursor {
+            } else if mode.contains(TermMode::APP_CURSOR) {
                 format!("\x1bO{final_char}")
             } else {
                 format!("\x1b[{final_char}")
@@ -122,7 +129,7 @@ mod tests {
     #[test]
     fn shell_and_tui_key_sequences() {
         assert_eq!(
-            encode_key(Key::Up, Modifiers::default(), true).unwrap(),
+            encode_key(Key::Up, Modifiers::default(), TermMode::APP_CURSOR).unwrap(),
             b"\x1bOA"
         );
         assert_eq!(
@@ -132,7 +139,7 @@ mod tests {
                     ctrl: true,
                     ..Default::default()
                 },
-                false
+                TermMode::empty()
             )
             .unwrap(),
             b"\x1b[1;5D"
@@ -144,14 +151,23 @@ mod tests {
                     ctrl: true,
                     ..Default::default()
                 },
-                false
+                TermMode::empty()
             )
             .unwrap(),
             [3]
         );
         assert_eq!(
-            encode_key(Key::Function(12), Modifiers::default(), false).unwrap(),
+            encode_key(Key::Function(12), Modifiers::default(), TermMode::empty()).unwrap(),
             b"\x1b[24~"
+        );
+        assert_eq!(
+            encode_key(
+                Key::Enter,
+                Modifiers::default(),
+                TermMode::LINE_FEED_NEW_LINE
+            )
+            .unwrap(),
+            b"\r\n"
         );
     }
 
