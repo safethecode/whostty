@@ -610,10 +610,25 @@ impl Whostty {
         true
     }
 
+    fn reset_composition(&mut self, focused: bool) {
+        if !focused || self.show_settings || self.close.is_some() || self.search_open {
+            self.composition.clear();
+        }
+    }
+
     fn keyboard(&mut self, ctx: &egui::Context, events: &[egui::Event], focused: bool) {
+        self.reset_composition(focused);
         let mut text_modifiers = None;
         let mut suppress_text = false;
         for event in events {
+            // Apply cancellation in event order: an IME Enter can precede Commit/Disabled.
+            if matches!(
+                event,
+                egui::Event::WindowFocused(false) | egui::Event::Ime(egui::ImeEvent::Disabled)
+            ) {
+                self.composition.clear();
+                continue;
+            }
             if self.close.is_some() || self.show_settings {
                 continue;
             }
@@ -1161,8 +1176,10 @@ impl eframe::App for Whostty {
                 self.open_profile(index, ctx);
             }
         }
+        let terminal_focused = focused && ctx.input(|input| input.focused);
+        self.reset_composition(terminal_focused);
         if !blocked {
-            self.keyboard(ctx, &events, focused);
+            self.keyboard(ctx, &events, terminal_focused);
         }
         if self.show_settings {
             self.preferences(ctx);
@@ -1349,9 +1366,11 @@ mod tests {
         app.keyboard(
             &ctx,
             &[
+                enter.clone(),
                 egui::Event::Ime(egui::ImeEvent::Commit("ime".into())),
                 egui::Event::Text("-text".into()),
                 enter,
+                egui::Event::Ime(egui::ImeEvent::Disabled),
             ],
             true,
         );
@@ -1373,6 +1392,40 @@ mod tests {
             std::thread::sleep(Duration::from_millis(20));
         }
         assert!(app.composition.is_empty());
+    }
+
+    #[test]
+    fn ime_preedit_is_canceled_when_the_terminal_loses_its_input_target() {
+        let mut app = test_app(Settings::default());
+        let ctx = egui::Context::default();
+        for event in [
+            egui::Event::WindowFocused(false),
+            egui::Event::Ime(egui::ImeEvent::Disabled),
+        ] {
+            app.composition = "미완성".into();
+            app.keyboard(&ctx, &[event], true);
+            assert!(app.composition.is_empty());
+        }
+        app.composition = "미완성".into();
+        app.keyboard(&ctx, &[], false);
+        assert!(app.composition.is_empty());
+        for block in 0..3 {
+            app.composition = "미완성".into();
+            app.show_settings = block == 0;
+            app.search_open = block == 1;
+            app.close = (block == 2).then_some(Close::Window);
+            app.reset_composition(true);
+            assert!(app.composition.is_empty());
+        }
+        app.show_settings = false;
+        app.search_open = false;
+        app.close = None;
+        app.composition = "유지".into();
+        app.reset_composition(true);
+        assert_eq!(
+            app.composition, "유지",
+            "Active terminal preedit must remain intact"
+        );
     }
 
     #[test]
