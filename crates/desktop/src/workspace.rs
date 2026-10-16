@@ -1,4 +1,5 @@
 use crate::layout::{Axis, Layout, PaneId};
+use whostty_core::search::Search;
 use whostty_core::{config::Profile, session::Session};
 
 pub struct Pane {
@@ -10,6 +11,7 @@ pub struct Pane {
     pub exit: Option<u32>,
     pub bell: bool,
     pub wheel: f32,
+    pub search: Search,
 }
 
 impl Pane {

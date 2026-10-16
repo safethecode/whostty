@@ -35,6 +35,7 @@ impl Dimensions for Size {
 pub struct Terminal<T: EventListener> {
     pub term: Term<T>,
     parser: Processor,
+    revision: u64,
 }
 
 impl<T: EventListener> Terminal<T> {
@@ -46,11 +47,22 @@ impl<T: EventListener> Terminal<T> {
         Self {
             term: Term::new(config, &size, listener),
             parser: Processor::new(),
+            revision: 0,
         }
     }
 
     pub fn feed(&mut self, bytes: &[u8]) {
         self.parser.advance(&mut self.term, bytes);
+        self.revision = self.revision.wrapping_add(1);
+    }
+
+    pub fn revision(&self) -> u64 {
+        self.revision
+    }
+
+    pub fn resize(&mut self, size: Size) {
+        self.term.resize(size);
+        self.revision = self.revision.wrapping_add(1);
     }
 
     pub fn text(&self) -> String {

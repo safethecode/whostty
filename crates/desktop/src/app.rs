@@ -37,6 +37,8 @@ pub struct Whostty {
     close: Option<Close>,
     allow_close: bool,
     next_pane: PaneId,
+    search_open: bool,
+    search_focus: bool,
 }
 
 impl Whostty {
@@ -67,6 +69,8 @@ impl Whostty {
             close: None,
             allow_close: false,
             next_pane: 1,
+            search_open: false,
+            search_focus: false,
         };
         if !app.config_path.exists() {
             if let Err(error) = app.settings.save(&app.config_path) {
@@ -114,6 +118,7 @@ impl Whostty {
             exit: None,
             bell: false,
             wheel: 0.0,
+            search: Default::default(),
         }
     }
 
@@ -189,6 +194,104 @@ impl Whostty {
         *self.tabs[self.active].pane_mut() = pane;
         self.focus_terminal = true;
         self.composition.clear();
+    }
+
+    fn find(&mut self, backwards: bool, reset: bool) {
+        if let Some(pane) = self.pane_mut() {
+            if let Some(session) = &pane.session {
+                let mut terminal = session
+                    .terminal
+                    .lock()
+                    .unwrap_or_else(|error| error.into_inner());
+                pane.search.find(&mut terminal, backwards, reset);
+            }
+        }
+    }
+
+    fn find_bar(&mut self, ctx: &egui::Context) {
+        let mut action = None;
+        let mut close = false;
+        let focus = std::mem::take(&mut self.search_focus);
+        egui::TopBottomPanel::top("find-bar")
+            .exact_height(38.0)
+            .show(ctx, |ui| {
+                ui.horizontal(|ui| {
+                    let Some(pane) = self.pane_mut() else {
+                        close = true;
+                        return;
+                    };
+                    ui.label("Find");
+                    let edit = ui.add(
+                        egui::TextEdit::singleline(&mut pane.search.query)
+                            .desired_width((ui.available_width() - 290.0).max(80.0))
+                            .hint_text("Search active pane")
+                            .char_limit(256),
+                    );
+                    if focus {
+                        edit.request_focus();
+                    }
+                    let mut changed = edit.changed();
+                    changed |= ui
+                        .checkbox(&mut pane.search.case_sensitive, "Aa")
+                        .on_hover_text("Match case")
+                        .changed();
+                    changed |= ui.checkbox(&mut pane.search.regex, "Regex").changed();
+                    if changed {
+                        action = Some((false, true));
+                    }
+                    if edit.lost_focus() && ui.input(|input| input.key_pressed(egui::Key::Enter)) {
+                        action = Some((ui.input(|i| i.modifiers.shift), false));
+                        edit.request_focus();
+                    }
+                    if ui
+                        .button("<")
+                        .on_hover_text("Previous · Shift+F3")
+                        .clicked()
+                    {
+                        action = Some((true, false));
+                    }
+                    if ui.button(">").on_hover_text("Next · F3").clicked() {
+                        action = Some((false, false));
+                    }
+                    if ui
+                        .button("x")
+                        .on_hover_text("Close search · Escape")
+                        .clicked()
+                    {
+                        close = true;
+                    }
+                    if let Some(error) = &pane.search.error {
+                        ui.colored_label(Color32::LIGHT_RED, error);
+                    } else if let Some(session) = &pane.session {
+                        let revision = session
+                            .terminal
+                            .lock()
+                            .unwrap_or_else(|e| e.into_inner())
+                            .revision();
+                        let status = if pane.search.query.is_empty() {
+                            ""
+                        } else if pane.search.stale(revision) {
+                            "Press Enter to search"
+                        } else if pane.search.result(revision).is_some() {
+                            if pane.search.wrapped {
+                                "Wrapped"
+                            } else {
+                                "Match found"
+                            }
+                        } else {
+                            "No matches"
+                        };
+                        ui.label(RichText::new(status).small().weak());
+                    }
+                });
+            });
+        if let Some((backwards, reset)) = action {
+            self.find(backwards, reset);
+        }
+        if close {
+            self.search_open = false;
+            self.focus_terminal = true;
+        }
     }
 
     fn poll(&mut self, ctx: &egui::Context) {
@@ -330,6 +433,22 @@ impl Whostty {
             } = event
             {
                 text_modifiers = Some(*modifiers);
+                if modifiers.ctrl && *key == egui::Key::F {
+                    self.search_open = true;
+                    self.search_focus = true;
+                    self.focus_terminal = false;
+                    ctx.request_repaint();
+                    continue;
+                }
+                if self.search_open && *key == egui::Key::Escape {
+                    self.search_open = false;
+                    self.focus_terminal = true;
+                    continue;
+                }
+                if self.search_open && *key == egui::Key::F3 {
+                    self.find(modifiers.shift, false);
+                    continue;
+                }
                 if modifiers.ctrl && modifiers.shift && *key == egui::Key::T {
                     self.open_profile(self.settings.default_profile, ctx);
                     continue;
@@ -517,7 +636,7 @@ impl Whostty {
             });
             if self.config_error { ui.colored_label(Color32::LIGHT_RED, "Fix and reload the config before saving preferences."); }
             ui.add_space(12.0);
-            ui.label(RichText::new("Ctrl+Shift+T  New tab\nCtrl+Tab  Switch tab\nCtrl+Shift+D / E  Split right / down\nCtrl+Alt+arrows  Focus pane\nCtrl+Shift+W  Close pane\nCtrl+Shift+C / V  Copy / paste\nCtrl+plus / minus / 0  Text size\nShift+PageUp / PageDown  Scroll history\nShift+drag  Select while a TUI uses the mouse").small());
+            ui.label(RichText::new("Ctrl+Shift+T  New tab\nCtrl+Tab  Switch tab\nCtrl+Shift+D / E  Split right / down\nCtrl+Alt+arrows  Focus pane\nCtrl+Shift+W  Close pane\nCtrl+F  Search active pane\nF3 / Shift+F3  Next / previous match\nCtrl+Shift+C / V  Copy / paste\nCtrl+plus / minus / 0  Text size\nShift+PageUp / PageDown  Scroll history\nShift+drag  Select while a TUI uses the mouse").small());
         });
         if self.show_settings && !open {
             self.focus_terminal = true;
@@ -697,6 +816,9 @@ impl eframe::App for Whostty {
             });
         }
         let mut focused = false;
+        if self.search_open {
+            self.find_bar(ctx);
+        }
         let blocked = self.show_settings || self.close.is_some();
         let mut close_pane = None;
         let mut restart_pane = false;
@@ -763,6 +885,7 @@ impl eframe::App for Whostty {
                                 if active { &self.composition } else { "" },
                                 self.focus_terminal && active && !blocked,
                                 &mut pane.wheel,
+                                self.search_open.then_some(&pane.search),
                             );
                             if result.response.clicked() || result.response.drag_started() {
                                 clicked = Some(id);
@@ -1032,6 +1155,8 @@ mod tests {
             close: None,
             allow_close: false,
             next_pane: 1,
+            search_open: false,
+            search_focus: false,
         };
         app.open_profile(0, &ctx);
         let enter = egui::Event::Key {
@@ -1044,10 +1169,12 @@ mod tests {
         app.keyboard(&ctx, &[egui::Event::Text("discarded".into())], false);
         app.composition = "preedit".into();
         app.keyboard(&ctx, &[enter.clone()], true);
+        ctx.input_mut(|input| input.modifiers.alt = true);
         app.keyboard(
             &ctx,
             &[
                 egui::Event::Ime(egui::ImeEvent::Commit("ime".into())),
+                egui::Event::Text("-text".into()),
                 enter,
             ],
             true,
@@ -1063,7 +1190,7 @@ mod tests {
                 .lock()
                 .unwrap()
                 .text();
-            if text.contains("received-ime") {
+            if text.contains("received-ime-text") {
                 break;
             }
             assert!(Instant::now() < deadline, "Unexpected shell input: {text}");
@@ -1105,6 +1232,8 @@ mod tests {
             close: None,
             allow_close: false,
             next_pane: 1,
+            search_open: false,
+            search_focus: false,
         };
         app.open(profile, &ctx);
         let first = app.tabs[0].active;
