@@ -164,7 +164,7 @@ impl Session {
             let mut reaped = false;
             loop {
                 if !exited {
-                    let outcome = match child.try_wait() {
+                    let outcome = match poll_child(child.as_mut()) {
                         Ok(Some(status)) => Some(ExitState::Exited(status.exit_code())),
                         Ok(None) => None,
                         Err(error) => Some(ExitState::Failed(format!("Wait for shell: {error}"))),
@@ -272,6 +272,33 @@ impl Drop for Session {
             }
         }
     }
+}
+
+fn poll_child(
+    child: &mut dyn portable_pty::Child,
+) -> std::io::Result<Option<portable_pty::ExitStatus>> {
+    #[cfg(windows)]
+    {
+        use windows_sys::Win32::{
+            Foundation::{WAIT_FAILED, WAIT_OBJECT_0, WAIT_TIMEOUT},
+            System::Threading::WaitForSingleObject,
+        };
+        let handle = child
+            .as_raw_handle()
+            .ok_or_else(|| std::io::Error::other("The shell has no Windows process handle"))?;
+        // The worker owns the child throughout this nonblocking handle check. Checking the
+        // signal avoids portable-pty 0.9 treating an actual exit code 259 as STILL_ACTIVE.
+        match unsafe { WaitForSingleObject(handle, 0) } {
+            WAIT_OBJECT_0 => child.wait().map(Some),
+            WAIT_TIMEOUT => Ok(None),
+            WAIT_FAILED => Err(std::io::Error::last_os_error()),
+            value => Err(std::io::Error::other(format!(
+                "Unexpected process wait result: {value}"
+            ))),
+        }
+    }
+    #[cfg(not(windows))]
+    child.try_wait()
 }
 
 fn pty_size(size: Size) -> PtySize {
@@ -449,5 +476,18 @@ mod tests {
         );
         wait_until(|| terminal.upgrade().is_none());
         wait_until(|| workers.upgrade().is_none());
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn windows_exit_code_259_is_not_mistaken_for_a_live_process() {
+        let profile = Profile::new(
+            "exit-259",
+            "powershell.exe",
+            &["-NoLogo", "-NoProfile", "-Command", "exit 259"],
+        );
+        let session = Session::spawn(&profile, Size::new(80, 24), 100, Arc::new(|| {})).unwrap();
+        wait_until(|| session.exit_state() == Some(ExitState::Exited(259)));
+        assert!(session.write(b"input-after-exit\r".to_vec()).is_err());
     }
 }
