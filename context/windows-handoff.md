@@ -63,7 +63,7 @@ PowerShell 7과 WSL은 해당 프로그램이 설치돼 있어야 한다. 기본
 font_size = 15.0
 scrollback = 10000
 default_profile = 0
-# font_path = 'C:\Windows\Fonts\CascadiaMono.ttf'
+# font_path = 'C:\Windows\Fonts\consola.ttf'
 # font_bold_path = 'C:\Windows\Fonts\consolab.ttf'
 # font_italic_path = 'C:\Windows\Fonts\consolai.ttf'
 # font_bold_italic_path = 'C:\Windows\Fonts\consolaz.ttf'
