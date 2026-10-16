@@ -9,6 +9,7 @@ license.workspace = true
 eframe = { version = "=0.31.1", default-features = false, features = ["wgpu", "default_fonts", "accesskit"] }
 whostty-core = { path = "../terminal-core" }
 ttf-parser = "0.25"
+unicode-normalization = "0.1"
 
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.59", features = ["Win32_UI_WindowsAndMessaging"] }

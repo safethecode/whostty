@@ -1,4 +1,5 @@
 use eframe::egui::{self, Color32, FontId, Pos2, Rect, Response, Sense, Stroke, Vec2};
+use unicode_normalization::UnicodeNormalization;
 use whostty_core::{
     alacritty_terminal::{
         event::EventListener,
@@ -284,6 +285,17 @@ pub fn show(
     // Text layout and GPU shape construction must not hold up PTY parsing.
     drop(terminal);
     let focused = response.has_focus() && ui.input(|i| i.focused);
+    let typography = crate::fonts::Typography::get(ui.ctx());
+    let cursor_wide = state
+        .cells
+        .iter()
+        .any(|cell| cell.point == cursor.point && cell.flags.contains(Flags::WIDE_CHAR));
+    let cursor_covers = |point: Point| {
+        point == cursor.point
+            || (cursor_wide
+                && point.line == cursor.point.line
+                && point.column.0 == cursor.point.column.0 + 1)
+    };
     // Paint every background first: a wide character's spacer must not cover its glyph.
     for indexed in &state.cells {
         let row = indexed.point.line.0 + offset as i32;
@@ -314,7 +326,7 @@ pub fn show(
             bg = Color32::from_rgb(51, 77, 70);
         }
         if offset == 0
-            && cursor.point == indexed.point
+            && cursor_covers(indexed.point)
             && mode.contains(TermMode::SHOW_CURSOR)
             && focused
             && cursor.shape == CursorShape::Block
@@ -345,7 +357,7 @@ pub fn show(
             fg = fg.gamma_multiply(0.6);
         }
         let cursor_cell =
-            offset == 0 && cursor.point == indexed.point && mode.contains(TermMode::SHOW_CURSOR);
+            offset == 0 && cursor_covers(indexed.point) && mode.contains(TermMode::SHOW_CURSOR);
         if cursor_cell && focused && cursor.shape == CursorShape::Block {
             fg = BACKGROUND;
         }
@@ -357,31 +369,30 @@ pub fn show(
             if let Some(zero_width) = indexed.zerowidth() {
                 text.extend(zero_width);
             }
-            let family = if flags.contains(Flags::BOLD) {
-                egui::FontFamily::Name("terminal-bold".into())
-            } else {
-                egui::FontFamily::Monospace
-            };
+            let text = text.nfc().collect();
+            let (format, synthetic_bold) = typography.format(flags, font_size, fg);
+            let galley = ui.fonts(|fonts| {
+                fonts.layout_job(egui::text::LayoutJob::single_section(text, format))
+            });
             // Share the viewport clip so the GPU can batch glyphs into the same draw call.
             // Each character is positioned on the VT grid rather than using proportional advances.
-            painter.text(
-                pos,
-                egui::Align2::LEFT_TOP,
-                text,
-                FontId::new(font_size, family),
-                fg,
-            );
+            painter.galley(pos, galley.clone(), fg);
+            if synthetic_bold {
+                painter.galley(
+                    pos + Vec2::new((font_size * 0.025).max(0.25), 0.0),
+                    galley,
+                    fg,
+                );
+            }
         }
-        if flags.intersects(Flags::ALL_UNDERLINES) {
-            painter.line_segment(
-                [
-                    cell_rect.left_bottom() - Vec2::new(0.0, 2.0),
-                    cell_rect.right_bottom() - Vec2::new(0.0, 2.0),
-                ],
-                Stroke::new(1.0, fg),
-            );
+        if !flags.contains(Flags::HIDDEN) {
+            let underline = indexed
+                .underline_color()
+                .map(|color| resolve_color(color, &colors))
+                .unwrap_or(fg);
+            paint_underline(&painter, cell_rect, flags, underline);
         }
-        if flags.contains(Flags::STRIKEOUT) {
+        if flags.contains(Flags::STRIKEOUT) && !flags.contains(Flags::HIDDEN) {
             painter.line_segment(
                 [cell_rect.left_center(), cell_rect.right_center()],
                 Stroke::new(1.0, fg),
@@ -396,7 +407,7 @@ pub fn show(
                 cursor.point.column.0 as f32 * cell.x,
                 cursor_row as f32 * cell.y,
             ),
-        cell,
+        Vec2::new(cell.x * if cursor_wide { 2.0 } else { 1.0 }, cell.y),
     );
     if offset == 0 && cursor_row >= 0 && mode.contains(TermMode::SHOW_CURSOR) {
         if (!focused && cursor.shape != CursorShape::Hidden)
@@ -449,6 +460,53 @@ pub fn show(
         response,
         input,
         error,
+    }
+}
+
+fn paint_underline(painter: &egui::Painter, rect: Rect, flags: Flags, color: Color32) {
+    if !flags.intersects(Flags::ALL_UNDERLINES) {
+        return;
+    }
+    let y = rect.bottom() - 2.0;
+    let stroke = Stroke::new(1.0, color);
+    if flags.contains(Flags::UNDERCURL) {
+        // Use absolute x phase so adjacent cells form a continuous wave.
+        let points = (0..=rect.width().ceil() as usize)
+            .map(|step| {
+                let x = (rect.left() + step as f32).min(rect.right());
+                Pos2::new(x, y - 1.0 + (x * std::f32::consts::TAU / 6.0).sin())
+            })
+            .collect();
+        painter.add(egui::Shape::line(points, stroke));
+    } else if flags.intersects(Flags::DOTTED_UNDERLINE | Flags::DASHED_UNDERLINE) {
+        let (period, length) = if flags.contains(Flags::DOTTED_UNDERLINE) {
+            (3.0, 1.0)
+        } else {
+            (7.0, 4.0)
+        };
+        let mut x = (rect.left() / period).floor() * period;
+        while x < rect.right() {
+            let start = x.max(rect.left());
+            let end = (x + length).min(rect.right());
+            if end > start {
+                painter.line_segment([Pos2::new(start, y), Pos2::new(end, y)], stroke);
+            }
+            x += period;
+        }
+    } else {
+        painter.line_segment(
+            [Pos2::new(rect.left(), y), Pos2::new(rect.right(), y)],
+            stroke,
+        );
+        if flags.contains(Flags::DOUBLE_UNDERLINE) {
+            painter.line_segment(
+                [
+                    Pos2::new(rect.left(), y - 3.0),
+                    Pos2::new(rect.right(), y - 3.0),
+                ],
+                stroke,
+            );
+        }
     }
 }
 
@@ -559,6 +617,39 @@ mod tests {
             .unwrap(),
             b"\x1b[<0;5;9m"
         );
+    }
+
+    #[test]
+    fn sgr_underlines_have_distinct_geometry_and_keep_their_color() {
+        use whostty_core::{alacritty_terminal::event::VoidListener, terminal::Terminal};
+        let ctx = egui::Context::default();
+        for (sgr, expected) in [("4", 1), ("4:2", 2), ("4:3", 1), ("4:4", 30), ("4:5", 13)] {
+            let mut terminal = Terminal::new(Size::new(40, 3), 10, VoidListener);
+            terminal.feed(format!("\x1b[{sgr};58:2::255:0:0mx").as_bytes());
+            let cell =
+                &terminal.term.grid()[whostty_core::alacritty_terminal::index::Line(0)][Column(0)];
+            assert_eq!(
+                cell.underline_color(),
+                Some(Color::Spec(Rgb { r: 255, g: 0, b: 0 }))
+            );
+            let output = ctx.run(Default::default(), |ctx| {
+                let painter = ctx.layer_painter(egui::LayerId::background());
+                paint_underline(
+                    &painter,
+                    Rect::from_min_size(Pos2::ZERO, Vec2::new(90.0, 24.0)),
+                    cell.flags,
+                    Color32::RED,
+                );
+            });
+            assert_eq!(
+                output.shapes.len(),
+                expected,
+                "Wrong geometry for SGR {sgr}"
+            );
+            if sgr == "4:3" {
+                assert!(matches!(output.shapes[0].shape, egui::Shape::Path(_)));
+            }
+        }
     }
 
     #[test]
