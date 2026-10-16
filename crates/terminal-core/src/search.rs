@@ -19,6 +19,12 @@ pub struct Search {
 }
 
 impl Search {
+    pub fn new(query: impl Into<String>) -> Self {
+        Self {
+            query: query.into(),
+            ..Self::default()
+        }
+    }
     pub fn result(&self, revision: u64) -> Option<&Match> {
         (revision == self.revision)
             .then_some(self.result.as_ref())

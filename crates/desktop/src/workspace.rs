@@ -10,7 +10,7 @@ pub struct Pane {
     pub error: Option<String>,
     pub exit: Option<u32>,
     pub bell: bool,
-    pub wheel: f32,
+    pub view: crate::view::ViewState,
     pub search: Search,
 }
 

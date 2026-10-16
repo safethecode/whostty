@@ -1,10 +1,15 @@
 use eframe::egui::{self, Color32, FontId, Pos2, Rect, Response, Sense, Stroke, Vec2};
 use whostty_core::{
     alacritty_terminal::{
-        grid::{Dimensions, Scroll},
+        event::EventListener,
+        grid::{Dimensions, Indexed, Scroll},
         index::{Column, Point, Side},
-        selection::{Selection, SelectionType},
-        term::{cell::Flags, color::Colors, viewport_to_point, TermMode},
+        selection::{Selection, SelectionRange, SelectionType},
+        term::{
+            cell::{Cell, Flags},
+            color::Colors,
+            viewport_to_point, RenderableCursor, Term, TermMode,
+        },
         vte::ansi::{Color, CursorShape, NamedColor, Rgb},
     },
     session::Session,
@@ -14,6 +19,38 @@ use whostty_core::{
 pub const BACKGROUND: Color32 = Color32::from_rgb(19, 23, 28);
 pub const FOREGROUND: Color32 = Color32::from_rgb(219, 224, 231);
 pub const ACCENT: Color32 = Color32::from_rgb(151, 219, 174);
+
+#[derive(Default)]
+pub struct ViewState {
+    wheel: f32,
+    cells: Vec<Indexed<Cell>>,
+}
+
+struct Snapshot {
+    cursor: RenderableCursor,
+    offset: usize,
+    colors: Colors,
+    selection: Option<SelectionRange>,
+    history: usize,
+}
+
+fn capture<T: EventListener>(term: &Term<T>, state: &mut ViewState) -> Snapshot {
+    let content = term.renderable_content();
+    state.cells.clear();
+    state
+        .cells
+        .extend(content.display_iter.map(|indexed| Indexed {
+            point: indexed.point,
+            cell: indexed.cell.clone(),
+        }));
+    Snapshot {
+        cursor: content.cursor,
+        offset: content.display_offset,
+        colors: *content.colors,
+        selection: content.selection,
+        history: term.grid().history_size(),
+    }
+}
 
 pub struct View {
     pub response: Response,
@@ -27,7 +64,7 @@ pub fn show(
     font_size: f32,
     composition: &str,
     focus: bool,
-    wheel: &mut f32,
+    state: &mut ViewState,
     search: Option<&whostty_core::search::Search>,
 ) -> View {
     let (rect, response) = ui.allocate_exact_size(ui.available_size(), Sense::click_and_drag());
@@ -67,6 +104,7 @@ pub fn show(
     let term = &mut terminal.term;
     let mode = *term.mode();
     let mouse = mode.intersects(TermMode::MOUSE_MODE);
+    let wheel = &mut state.wheel;
     let events = ui.input(|input| input.events.clone());
     let shift = ui.input(|input| input.modifiers.shift);
     let pointer = ui.input(|input| input.pointer.hover_pos());
@@ -199,15 +237,18 @@ pub fn show(
 
     let painter = ui.painter_at(rect);
     painter.rect_filled(rect, 0.0, BACKGROUND);
-    let content = term.renderable_content();
-    let cursor = content.cursor;
-    let offset = content.display_offset;
-    let colors = content.colors;
-    let selection = content.selection;
+    let Snapshot {
+        cursor,
+        offset,
+        colors,
+        selection,
+        history,
+    } = capture(term, state);
+    // Text layout and GPU shape construction must not hold up PTY parsing.
+    drop(terminal);
     let focused = response.has_focus() && ui.input(|i| i.focused);
-    let cells: Vec<_> = content.display_iter.collect();
     // Paint every background first: a wide character's spacer must not cover its glyph.
-    for indexed in &cells {
+    for indexed in &state.cells {
         let row = indexed.point.line.0 + offset as i32;
         if row < 0 || row as usize >= size.rows {
             continue;
@@ -219,7 +260,7 @@ pub fn show(
             } else {
                 indexed.bg
             },
-            colors,
+            &colors,
         );
         if search_match.is_some_and(|range| {
             range.contains(&indexed.point)
@@ -247,7 +288,7 @@ pub fn show(
             painter.rect_filled(Rect::from_min_size(pos, cell), 0.0, bg);
         }
     }
-    for indexed in cells {
+    for indexed in &state.cells {
         let row = indexed.point.line.0 + offset as i32;
         if row < 0 || row as usize >= size.rows {
             continue;
@@ -261,7 +302,7 @@ pub fn show(
             } else {
                 indexed.fg
             },
-            colors,
+            &colors,
         );
         if flags.contains(Flags::DIM) {
             fg = fg.gamma_multiply(0.6);
@@ -353,7 +394,6 @@ pub fn show(
         }
     }
 
-    let history = term.grid().history_size();
     if offset > 0 && history > 0 {
         let track = Rect::from_min_size(
             rect.right_top() - Vec2::new(4.0, 0.0),
@@ -499,5 +539,25 @@ mod tests {
             .unwrap(),
             b"\x1b[<0;5;9m"
         );
+    }
+
+    #[test]
+    fn renderer_snapshot_is_owned_and_reuses_its_cell_buffer() {
+        use whostty_core::{
+            alacritty_terminal::event::VoidListener,
+            terminal::{Size, Terminal},
+        };
+        let mut terminal = Terminal::new(Size::new(80, 24), 100, VoidListener);
+        terminal.feed(b"\x1b[31moriginal");
+        let mut state = ViewState::default();
+        let snapshot = capture(&terminal.term, &mut state);
+        let capacity = state.cells.capacity();
+        terminal.feed(b"\r\x1b[32mchanged");
+        assert_eq!(state.cells[0].c, 'o');
+        assert_eq!(state.cells[0].fg, Color::Named(NamedColor::Red));
+        assert_eq!(snapshot.offset, 0);
+        capture(&terminal.term, &mut state);
+        assert_eq!(state.cells[0].c, 'c');
+        assert_eq!(state.cells.capacity(), capacity);
     }
 }
