@@ -40,6 +40,7 @@ pub struct Whostty {
     next_pane: PaneId,
     search_open: bool,
     search_focus: bool,
+    reported_focus: Option<PaneId>,
 }
 
 impl Whostty {
@@ -72,6 +73,7 @@ impl Whostty {
             next_pane: 1,
             search_open: false,
             search_focus: false,
+            reported_focus: None,
         };
         if !app.config_path.exists() {
             if let Err(error) = app.settings.save(&app.config_path) {
@@ -300,6 +302,14 @@ impl Whostty {
             let Some(session) = &tab.session else {
                 continue;
             };
+            {
+                let mut terminal = session.terminal.lock().unwrap_or_else(|e| e.into_inner());
+                let now = std::time::Instant::now();
+                terminal.flush_sync(now);
+                if let Some(deadline) = terminal.sync_deadline() {
+                    ctx.request_repaint_after(deadline.saturating_duration_since(now));
+                }
+            }
             match session.exit_state() {
                 Some(ExitState::Exited(code)) => tab.exit = Some(code),
                 Some(ExitState::Failed(error)) => tab.error = Some(error),
@@ -408,6 +418,42 @@ impl Whostty {
         } else {
             false
         }
+    }
+
+    fn report_focus(&mut self, focused: bool) {
+        let target = self.pane().filter(|_| focused).map(|pane| pane.id);
+        if target == self.reported_focus {
+            return;
+        }
+        for (id, gained) in [(self.reported_focus, false), (target, true)] {
+            let Some(pane) = self
+                .tabs
+                .iter_mut()
+                .flat_map(|tab| &mut tab.panes)
+                .find(|pane| Some(pane.id) == id)
+            else {
+                continue;
+            };
+            let Some(session) = pane.session.as_ref().filter(|_| pane.exit.is_none()) else {
+                continue;
+            };
+            let reporting = session
+                .terminal
+                .lock()
+                .unwrap_or_else(|e| e.into_inner())
+                .term
+                .mode()
+                .contains(TermMode::FOCUS_IN_OUT);
+            if reporting {
+                // Protocol messages must not clear the user's selection or scrollback.
+                if let Err(error) =
+                    session.write(if gained { b"\x1b[I" } else { b"\x1b[O" }.to_vec())
+                {
+                    pane.error = Some(format!("{error:#}"));
+                }
+            }
+        }
+        self.reported_focus = target;
     }
 
     fn close_tab(&mut self, index: usize) {
@@ -588,20 +634,11 @@ impl Whostty {
                                 alt: modifiers.alt,
                                 shift: modifiers.shift,
                             },
-                            self.mode().contains(TermMode::APP_CURSOR),
+                            self.mode(),
                         ) {
                             self.send(bytes);
                         }
                     }
-                }
-                egui::Event::WindowFocused(focused)
-                    if self.mode().contains(TermMode::FOCUS_IN_OUT) =>
-                {
-                    self.send(if *focused {
-                        b"\x1b[I".to_vec()
-                    } else {
-                        b"\x1b[O".to_vec()
-                    })
                 }
                 _ => {}
             }
@@ -1014,6 +1051,13 @@ impl eframe::App for Whostty {
                 tab.pane().title
             )));
         }
+        self.report_focus(
+            focused
+                && ctx.input(|input| input.focused)
+                && !self.show_settings
+                && self.close.is_none()
+                && !self.search_focus,
+        );
     }
 }
 
@@ -1183,6 +1227,7 @@ mod tests {
             next_pane: 1,
             search_open: false,
             search_focus: false,
+            reported_focus: None,
         };
         app.open_profile(0, &ctx);
         let enter = egui::Event::Key {
@@ -1260,6 +1305,7 @@ mod tests {
             next_pane: 1,
             search_open: false,
             search_focus: false,
+            reported_focus: None,
         };
         app.open(profile, &ctx);
         let first = app.tabs[0].active;

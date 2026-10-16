@@ -153,6 +153,10 @@ impl Session {
                     }
                 }
             }
+            if let Ok(mut terminal) = output_terminal.lock() {
+                terminal.finish_output();
+            }
+            output_wake();
         });
 
         let child_finished = finished.clone();

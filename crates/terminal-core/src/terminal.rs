@@ -1,9 +1,10 @@
 use alacritty_terminal::{
     event::EventListener,
     grid::Dimensions,
-    term::{Config, Term},
+    term::{Config, Osc52, Term},
     vte::ansi::Processor,
 };
+use std::time::Instant;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Size {
@@ -42,6 +43,7 @@ impl<T: EventListener> Terminal<T> {
     pub fn new(size: Size, scrollback: usize, listener: T) -> Self {
         let config = Config {
             scrolling_history: scrollback,
+            osc52: Osc52::Disabled,
             ..Config::default()
         };
         Self {
@@ -58,6 +60,26 @@ impl<T: EventListener> Terminal<T> {
 
     pub fn revision(&self) -> u64 {
         self.revision
+    }
+
+    pub fn sync_deadline(&self) -> Option<Instant> {
+        self.parser.sync_timeout().sync_timeout()
+    }
+
+    pub fn flush_sync(&mut self, now: Instant) -> bool {
+        if self.sync_deadline().is_some_and(|deadline| deadline <= now) {
+            self.finish_output();
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn finish_output(&mut self) {
+        if self.sync_deadline().is_some() {
+            self.parser.stop_sync(&mut self.term);
+            self.revision = self.revision.wrapping_add(1);
+        }
     }
 
     pub fn resize(&mut self, size: Size) {
@@ -111,5 +133,24 @@ mod tests {
         terminal.term.resize(Size::new(40, 5));
         assert_eq!(terminal.term.columns(), 40);
         assert!(terminal.text().contains("four"));
+    }
+
+    #[test]
+    fn synchronized_output_is_atomic_and_recovers_without_an_end_marker() {
+        let mut terminal = Terminal::new(Size::new(40, 3), 10, VoidListener);
+        terminal.feed(b"before\x1b[?2026h\rhidden-until-commit");
+        assert!(terminal.text().contains("before"));
+        assert!(!terminal.text().contains("hidden"));
+        let deadline = terminal.sync_deadline().unwrap();
+        assert!(!terminal.flush_sync(deadline - std::time::Duration::from_millis(1)));
+        assert!(terminal.flush_sync(deadline));
+        assert!(terminal.text().contains("hidden-until-commit"));
+        assert!(terminal.sync_deadline().is_none());
+        terminal.feed(b"\x1b[?2026h\rcomplete\x1b[?2026l");
+        assert!(terminal.text().contains("complete"));
+        assert!(terminal.sync_deadline().is_none());
+        terminal.feed(b"\x1b[?2026h\rfinal-output");
+        terminal.finish_output();
+        assert!(terminal.text().contains("final-output"));
     }
 }
