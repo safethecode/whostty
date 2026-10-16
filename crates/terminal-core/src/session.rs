@@ -165,13 +165,16 @@ impl Session {
         if self.size == size {
             return Ok(());
         }
-        // Serialize grid resizing with output parsing so ConPTY reflow uses the new dimensions.
-        let mut terminal = self
-            .terminal
-            .lock()
-            .map_err(|_| anyhow::anyhow!("Terminal lock poisoned"))?;
+        // ResizePseudoConsole can wait for the output pipe to drain. Never hold the grid
+        // lock across that call: the reader needs it to keep draining the pipe.
+        {
+            let mut terminal = self
+                .terminal
+                .lock()
+                .map_err(|_| anyhow::anyhow!("Terminal lock poisoned"))?;
+            terminal.term.resize(size);
+        }
         self.master.resize(pty_size(size)).context("Resize PTY")?;
-        terminal.term.resize(size);
         self.size = size;
         Ok(())
     }
@@ -290,5 +293,34 @@ mod tests {
         let session = Session::spawn(&profile, Size::new(80, 24), 100, Arc::new(|| {})).unwrap();
         // Intentionally never drain session.events while thousands of OSC titles arrive.
         wait_until(|| session.terminal.lock().unwrap().text().contains("flood-ok"));
+    }
+
+    #[test]
+    fn resize_while_output_is_flowing_does_not_deadlock() {
+        #[cfg(windows)]
+        let profile = Profile::new("resize", "powershell.exe", &[
+            "-NoLogo", "-NoProfile", "-Command",
+            "for ($i=0; $i -lt 1000; $i++) { [Console]::WriteLine('resize-output ' * 20) }; [Console]::Write('resize-finished')",
+        ]);
+        #[cfg(not(windows))]
+        let profile = Profile::new("resize", "/bin/sh", &[
+            "-c", "i=0; while [ \"$i\" -lt 1000 ]; do printf 'resize-output %.0s' 1 2 3 4 5 6 7 8 9 10; printf '\\r\\n'; i=$((i+1)); done; printf resize-finished",
+        ]);
+        let mut session =
+            Session::spawn(&profile, Size::new(80, 24), 100, Arc::new(|| {})).unwrap();
+        for index in 0..40 {
+            session
+                .resize(Size::new(80 + index % 20, 24 + index % 10))
+                .unwrap();
+            thread::sleep(Duration::from_millis(2));
+        }
+        wait_until(|| {
+            session
+                .terminal
+                .lock()
+                .unwrap()
+                .text()
+                .contains("resize-finished")
+        });
     }
 }
