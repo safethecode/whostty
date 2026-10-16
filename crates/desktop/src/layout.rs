@@ -242,4 +242,71 @@ mod tests {
             }
         }
     }
+
+    #[test]
+    fn pointer_drag_updates_the_split_ratio() {
+        let ctx = egui::Context::default();
+        let mut layout = Layout::Pane(1);
+        layout.split(1, 2, Axis::Columns);
+        let mut frame = |events: Vec<egui::Event>| {
+            let _ = ctx.run(
+                egui::RawInput {
+                    screen_rect: Some(Rect::from_min_size(Pos2::ZERO, egui::vec2(800.0, 600.0))),
+                    events,
+                    ..Default::default()
+                },
+                |ctx| {
+                    egui::CentralPanel::default()
+                        .frame(egui::Frame::new())
+                        .show(ctx, |ui| {
+                            let mut panes = Vec::new();
+                            layout.show(
+                                ui,
+                                ui.available_rect_before_wrap(),
+                                Id::new("test-split"),
+                                &mut panes,
+                            );
+                            for (id, rect) in panes {
+                                ui.scope_builder(
+                                    egui::UiBuilder::new().max_rect(rect).id_salt(id),
+                                    |ui| {
+                                        ui.set_clip_rect(rect);
+                                        ui.set_min_size(rect.size());
+                                        ui.horizontal(|ui| {
+                                            ui.selectable_label(false, "Shell").clicked();
+                                            ui.small_button("x").clicked();
+                                        });
+                                        ui.allocate_exact_size(
+                                            ui.available_size(),
+                                            Sense::click_and_drag(),
+                                        );
+                                    },
+                                );
+                            }
+                        });
+                },
+            );
+        };
+        frame(vec![]);
+        frame(vec![
+            egui::Event::PointerMoved(Pos2::new(400.0, 300.0)),
+            egui::Event::PointerButton {
+                pos: Pos2::new(400.0, 300.0),
+                button: egui::PointerButton::Primary,
+                pressed: true,
+                modifiers: Default::default(),
+            },
+        ]);
+        frame(vec![egui::Event::PointerMoved(Pos2::new(560.0, 300.0))]);
+        frame(vec![egui::Event::PointerButton {
+            pos: Pos2::new(560.0, 300.0),
+            button: egui::PointerButton::Primary,
+            pressed: false,
+            modifiers: Default::default(),
+        }]);
+        let Layout::Split { ratio, .. } = layout else {
+            panic!("Expected split")
+        };
+        assert!(ratio > 0.65, "Drag did not update ratio: {ratio}");
+    }
 }
