@@ -4,9 +4,12 @@ param()
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 $ProjectRoot = Split-Path $PSScriptRoot -Parent
+$PreviousRustFlags = $env:RUSTFLAGS
 Push-Location $ProjectRoot
 try {
     if (-not $IsWindows) { throw 'Run this script in PowerShell 7 on Windows.' }
+    # Keep the portable executable independent of the VC++ redistributable.
+    $env:RUSTFLAGS = (($PreviousRustFlags + ' -C target-feature=+crt-static').Trim())
     $Target = 'x86_64-pc-windows-msvc'
     & cargo build --release --locked --package whostty --target $Target
     if ($LASTEXITCODE -ne 0) { throw 'Release build failed.' }
@@ -22,4 +25,8 @@ try {
     $Hash = (Get-FileHash -Algorithm SHA256 $Archive).Hash.ToLowerInvariant()
     "$Hash  whostty-windows-x64.zip" | Set-Content -Encoding ascii "$Archive.sha256"
     Write-Host "Package: $Archive"
-} finally { Pop-Location }
+} finally {
+    if ($null -eq $PreviousRustFlags) { Remove-Item Env:RUSTFLAGS -ErrorAction SilentlyContinue }
+    else { $env:RUSTFLAGS = $PreviousRustFlags }
+    Pop-Location
+}

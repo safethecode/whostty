@@ -46,6 +46,7 @@ cargo install cargo-about --version 0.9.2 --locked --features cli
 ```
 
 산출물은 `dist/whostty-windows-x64.zip` 및 SHA256 파일이다. 라이선스 고지 생성이 실패하면 패키징도 실패한다.
+배포 스크립트는 VC++ 런타임을 정적으로 링크한다. CI는 생성된 PE 파일의 import table을 검사해 VC++ 재배포 패키지 의존성이 없는지 확인한다.
 빌드/테스트만 할 때는 cargo-about이나 PowerShell 7이 필요하지 않다.
 
 ## 프로필 및 설정
