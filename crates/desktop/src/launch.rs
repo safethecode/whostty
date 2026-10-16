@@ -1,7 +1,7 @@
 use std::{ffi::OsString, path::PathBuf};
 use whostty_core::config::{Profile, Settings};
 
-pub const HELP: &str = "Whostty — a native Windows terminal\n\nUsage: whostty [OPTIONS] [-e PROGRAM [ARGS...]]\n\n  -d, --working-directory PATH  Start in this directory\n  -p, --profile NAME            Select a configured profile\n      --config PATH             Use this configuration file\n  -e, --command PROGRAM [...]   Run a program without shell evaluation\n      -- PROGRAM [...]         End options and run a program\n  -h, --help                    Show help\n  -V, --version                 Show version\n\nCommand and directory overrides apply to the initial tab.\nNew tabs continue to use configured profiles.\n";
+pub const HELP: &str = "Whostty — a native Windows terminal\n\nUsage: whostty [OPTIONS] [-e PROGRAM [ARGS...]]\n\n  -d, --working-directory PATH  Start in this directory\n  -p, --profile NAME            Select a configured profile\n      --config PATH             Use this configuration file\n  -e, --command PROGRAM [...]   Run a program without shell evaluation\n      -- PROGRAM [...]         End options and run a program\n      --check                   Check terminal startup and rendering\n  -h, --help                    Show help\n  -V, --version                 Show version\n\nCommand and directory overrides apply to the initial tab.\nNew tabs continue to use configured profiles.\n";
 
 #[derive(Debug, Default)]
 pub struct Launch {
@@ -9,6 +9,7 @@ pub struct Launch {
     pub directory: Option<PathBuf>,
     pub profile: Option<String>,
     pub command: Option<(String, Vec<String>)>,
+    pub check: bool,
 }
 
 #[derive(Debug)]
@@ -25,6 +26,7 @@ pub fn parse(args: impl IntoIterator<Item = OsString>) -> Result<Action, String>
         match arg.to_str() {
             Some("-h" | "--help") => return Ok(Action::Help),
             Some("-V" | "--version") => return Ok(Action::Version),
+            Some("--check") => launch.check = true,
             Some("--config") => {
                 launch.config = Some(args.next().ok_or("--config needs a path")?.into())
             }
@@ -56,6 +58,14 @@ pub fn parse(args: impl IntoIterator<Item = OsString>) -> Result<Action, String>
                 ))
             }
         }
+    }
+    if launch.check
+        && (launch.config.is_some()
+            || launch.directory.is_some()
+            || launch.profile.is_some()
+            || launch.command.is_some())
+    {
+        return Err("--check is isolated and cannot be combined with launch overrides".into());
     }
     Ok(Action::Run(launch))
 }
@@ -192,5 +202,10 @@ mod tests {
             parse(args(&["--version"])).unwrap(),
             Action::Version
         ));
+        assert!(matches!(
+            parse(args(&["--check"])).unwrap(),
+            Action::Run(Launch { check: true, .. })
+        ));
+        assert!(parse(args(&["--check", "--profile", "PowerShell"])).is_err());
     }
 }

@@ -117,3 +117,11 @@ ReplaceFileW의 백업-이름 변경 구간에 reader가 NotFound를 관찰한 C
 렌더링과 터미널 앱 색상 질의가 같은 resolver를 사용한다. OSC override가 우선이며 리셋하면 현재 테마로 복귀한다.
 잘못된 색상/팔레트 길이는 설정 파싱에서 거부한다. Preferences에서 미리 보기와 명시적 저장이 가능하다.
 Mac 실제 창에서 라이트 테마와 분할 패널의 텍스트·장식·포커스·커서를 확인했다.
+
+`--check`는 별도 CheckApp으로 실행되어 사용자 설정/프로필을 사용하지 않는다. 공유 터미널 view·기본 시스템 글꼴·
+실제 PTY의 truecolor probe를 렌더링하고, eframe Screenshot의 GPU readback에서 해당 색상 픽셀을 검증한다.
+PTY 종료 0과 GPU readback이 모두 맞아야 성공 JSON을 내보낸다. 내부 15초/외부 CI 60초 제한을 두고 자동 종료한다.
+Windows package는 압축한 exe를 다시 꺼내 이 검사를 실행한다. 사용자 설정 환경변수도 별도의 임시 경로로 두고
+설정 파일이 생기지 않았는지 검사한다. JSON에 backend/device type을 기록하므로 software adapter와 실제 하드웨어를 구분할 수 있다.
+Mac 실제 실행 결과: Apple M3 Pro/Metal, 1600×1000 readback, probe 색상 3560픽셀, PTY·renderer 성공, 설정 미생성.
+이 결과를 실제 입력 지연·성능 비교나 Windows 실기기 조작 검증으로 표현하지 않는다.
