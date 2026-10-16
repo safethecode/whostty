@@ -1,4 +1,8 @@
-use std::{hint::black_box, time::Instant};
+use std::{
+    hint::black_box,
+    sync::{Arc, Mutex},
+    time::{Duration, Instant},
+};
 use whostty_core::{
     alacritty_terminal::{
         event::VoidListener,
@@ -51,5 +55,23 @@ fn main() {
         black_box(&cells);
     }
     let snapshot_us = start.elapsed().as_secs_f64() * 1_000_000.0 / 1000.0;
-    println!("{{\"os\":\"{}\",\"arch\":\"{}\",\"debug\":{},\"columns\":120,\"rows\":40,\"history_lines\":{},\"ascii_mib_per_second\":{ascii:.2},\"unicode_mib_per_second\":{unicode:.2},\"search_no_match_10k_lines_avg_ms\":{search_ms:.3},\"snapshot_4800_cells_avg_us\":{snapshot_us:.3}}}",std::env::consts::OS,std::env::consts::ARCH,cfg!(debug_assertions),terminal.term.grid().history_size());
+    let history = terminal.term.grid().history_size();
+    let terminal = Arc::new(Mutex::new(terminal));
+    let mut search = Search::new("absent needle");
+    let start = Instant::now();
+    search.start(&terminal, false, false, Arc::new(|| {}));
+    let start_us = start.elapsed().as_secs_f64() * 1_000_000.0;
+    let mut max_lock_wait_us = 0.0_f64;
+    let mut probes = 0;
+    while search.busy() {
+        let probe = Instant::now();
+        let mut terminal = terminal.lock().unwrap();
+        max_lock_wait_us = max_lock_wait_us.max(probe.elapsed().as_secs_f64() * 1_000_000.0);
+        probes += 1;
+        search.poll(&mut terminal);
+        drop(terminal);
+        std::thread::sleep(Duration::from_micros(100));
+    }
+    let async_ms = start.elapsed().as_secs_f64() * 1000.0;
+    println!("{{\"os\":\"{}\",\"arch\":\"{}\",\"debug\":{},\"columns\":120,\"rows\":40,\"history_lines\":{history},\"ascii_mib_per_second\":{ascii:.2},\"unicode_mib_per_second\":{unicode:.2},\"search_no_match_10k_lines_avg_ms\":{search_ms:.3},\"snapshot_4800_cells_avg_us\":{snapshot_us:.3},\"async_search_start_us\":{start_us:.3},\"async_search_total_ms\":{async_ms:.3},\"async_search_max_grid_lock_wait_us\":{max_lock_wait_us:.3},\"async_search_lock_probes\":{probes}}}",std::env::consts::OS,std::env::consts::ARCH,cfg!(debug_assertions));
 }

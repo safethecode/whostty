@@ -2,6 +2,7 @@ pub mod config;
 pub mod input;
 pub mod mouse;
 pub mod search;
+mod search_worker;
 pub mod session;
 pub mod terminal;
 

@@ -15,7 +15,7 @@ Ghostty의 주요 방향인 네이티브 UX, 탭·분할, 글자 처리, 다양�
 | VT·TUI | Alacritty 엔진, ANSI/대체 화면/스크롤백, 키·마우스 회귀 테스트 | 실제 vim/neovim/less/tmux/PowerShell 편집과 앱별 회귀 자료 |
 | 입력 | 기본 키, bracketed paste, IME 조합 보류, AltGr 문자 전달 | Windows 한국어 IME·AltGr 실기기, 고급 키보드 프로토콜 |
 | 렌더링 | wgpu, 셀 스냅샷, 공유 클립, 폰트 fallback | italic/장식, ligature/복합 shaping, emoji, GPU 측정 |
-| 검색 | 정규식·순환·현재 결과 강조 | 대용량 검색의 UI 블로킹 제거, 결합 부호 매칭 |
+| 검색 | 백그라운드 취소·revision 검사·결합 부호/soft wrap 매칭 | 긴 단일 논리 행의 256 KiB 제한, Windows 실사용 |
 | 사용성 | 탭·중첩 분할·프로필·설정 | 링크, 명령 탐색, 작업 디렉터리 계승, 키 바인딩·테마 |
 | 배포 | Windows ZIP·체크섬·고지·정적 CRT·CI | Windows 설치/업데이트·서명·ARM64, 실기기 설치/재실행 |
 | 접근성 | 기본 UI AccessKit | 터미널 텍스트·선택·커서의 스크린리더 검증 |
@@ -25,7 +25,7 @@ Ghostty 수준의 완성도를 달성했다고 결론 내릴 수 없다. 현재 
 
 ## 다음 개선 순서
 
-1. 동기화 출력 타임아웃/EOF 복구, 모드별 Enter, TUI 마우스 캡처·포커스 보고.
-2. 취소 가능한 대용량 검색과 오래된 결과 제거.
+1. PR #7 완료: 동기화 출력 타임아웃/EOF 복구, 모드별 Enter, TUI 마우스 캡처·포커스 보고.
+2. 백그라운드 대용량 검색과 오래된 결과 제거를 검증한다.
 3. 글꼴 스타일·장식과 렌더링 검증, 이후 shaping 기반 재검토.
 4. 일상 사용 기능과 Windows 실행·패키지 품질을 지속적으로 개선한다.
