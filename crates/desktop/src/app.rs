@@ -116,7 +116,11 @@ impl Whostty {
             let Some(session) = &tab.session else {
                 continue;
             };
-            for event in session.events.try_iter().take(512) {
+            let events: Vec<_> = session.events.try_iter().take(512).collect();
+            if events.len() == 512 {
+                ctx.request_repaint();
+            }
+            for event in events {
                 match event {
                     SessionEvent::Exited(code) => tab.exit = Some(code),
                     SessionEvent::Error(error) => tab.error = Some(error),
@@ -784,4 +788,84 @@ fn configure_fonts(ctx: &egui::Context, custom: Option<&std::path::Path>) -> Opt
     }
     ctx.set_fonts(fonts);
     error
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::time::{Duration, Instant};
+
+    #[test]
+    fn keyboard_ignores_unfocused_text_and_ime_enter_before_commit() {
+        #[cfg(windows)]
+        let profile = Profile::new(
+            "input",
+            "powershell.exe",
+            &[
+                "-NoLogo",
+                "-NoProfile",
+                "-Command",
+                "$v = [Console]::ReadLine(); [Console]::Write('received-' + $v)",
+            ],
+        );
+        #[cfg(not(windows))]
+        let profile = Profile::new(
+            "input",
+            "/bin/sh",
+            &["-c", "read value; printf received-%s \"$value\""],
+        );
+        let ctx = egui::Context::default();
+        let mut app = Whostty {
+            settings: Settings {
+                profiles: vec![profile],
+                ..Settings::default()
+            },
+            config_path: PathBuf::new(),
+            config_error: false,
+            tabs: Vec::new(),
+            active: 0,
+            focus_terminal: true,
+            composition: String::new(),
+            show_settings: false,
+            message: None,
+            close: None,
+            allow_close: false,
+        };
+        app.open_profile(0, &ctx);
+        let enter = egui::Event::Key {
+            key: egui::Key::Enter,
+            physical_key: None,
+            pressed: true,
+            repeat: false,
+            modifiers: egui::Modifiers::default(),
+        };
+        app.keyboard(&ctx, &[egui::Event::Text("discarded".into())], false);
+        app.composition = "preedit".into();
+        app.keyboard(&ctx, &[enter.clone()], true);
+        app.keyboard(
+            &ctx,
+            &[
+                egui::Event::Ime(egui::ImeEvent::Commit("ime".into())),
+                enter,
+            ],
+            true,
+        );
+        let deadline = Instant::now() + Duration::from_secs(15);
+        loop {
+            let text = app.tabs[0]
+                .session
+                .as_ref()
+                .unwrap()
+                .terminal
+                .lock()
+                .unwrap()
+                .text();
+            if text.contains("received-ime") {
+                break;
+            }
+            assert!(Instant::now() < deadline, "Unexpected shell input: {text}");
+            std::thread::sleep(Duration::from_millis(20));
+        }
+        assert!(app.composition.is_empty());
+    }
 }

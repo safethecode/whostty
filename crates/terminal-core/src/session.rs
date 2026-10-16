@@ -1,7 +1,7 @@
 use std::{
     io::{Read, Write},
     sync::{
-        mpsc::{self, Receiver, Sender, SyncSender},
+        mpsc::{self, Receiver, SyncSender},
         Arc, Mutex,
     },
     thread,
@@ -25,7 +25,7 @@ pub enum SessionEvent {
 
 #[derive(Clone)]
 pub struct Listener {
-    events: Sender<SessionEvent>,
+    events: SyncSender<SessionEvent>,
     input: SyncSender<Vec<u8>>,
 }
 
@@ -33,12 +33,13 @@ impl EventListener for Listener {
     fn send_event(&self, event: Event) {
         if let Event::PtyWrite(text) = event {
             if self.input.try_send(text.into_bytes()).is_err() {
-                let _ = self.events.send(SessionEvent::Error(
+                let _ = self.events.try_send(SessionEvent::Error(
                     "PTY response queue is full or closed".into(),
                 ));
             }
         } else {
-            let _ = self.events.send(SessionEvent::Terminal(event));
+            // Never block while the parser holds the grid lock, even if the UI is busy.
+            let _ = self.events.try_send(SessionEvent::Terminal(event));
         }
     }
 }
@@ -82,7 +83,7 @@ impl Session {
         let killer = child.clone_killer();
         drop(pair.slave);
 
-        let (events_tx, events) = mpsc::channel();
+        let (events_tx, events) = mpsc::sync_channel(1024);
         let (input, input_rx) = mpsc::sync_channel::<Vec<u8>>(64);
         let terminal = Arc::new(Mutex::new(Terminal::new(
             size,
@@ -98,7 +99,8 @@ impl Session {
         thread::spawn(move || {
             while let Ok(bytes) = input_rx.recv() {
                 if let Err(error) = writer.write_all(&bytes).and_then(|()| writer.flush()) {
-                    let _ = writer_events.send(SessionEvent::Error(format!("PTY write: {error}")));
+                    let _ =
+                        writer_events.try_send(SessionEvent::Error(format!("PTY write: {error}")));
                     writer_wake();
                     break;
                 }
@@ -126,8 +128,8 @@ impl Session {
                     #[cfg(unix)]
                     Err(error) if error.raw_os_error() == Some(5) => break,
                     Err(error) => {
-                        let _ =
-                            output_events.send(SessionEvent::Error(format!("PTY read: {error}")));
+                        let _ = output_events
+                            .try_send(SessionEvent::Error(format!("PTY read: {error}")));
                         output_wake();
                         break;
                     }
@@ -275,6 +277,22 @@ mod tests {
                 .text()
                 .contains("received-hello")
         });
+    }
+
+    #[test]
+    fn title_event_flood_cannot_block_terminal_output() {
+        #[cfg(windows)]
+        let profile = Profile::new("flood", "powershell.exe", &[
+            "-NoLogo", "-NoProfile", "-Command",
+            "for ($i=0; $i -lt 2000; $i++) { [Console]::Write([string][char]27 + ']2;title' + [char]7) }; [Console]::Write('flood-ok')",
+        ]);
+        #[cfg(not(windows))]
+        let profile = Profile::new("flood", "/bin/sh", &[
+            "-c", "i=0; while [ \"$i\" -lt 2000 ]; do printf '\\033]2;title\\007'; i=$((i+1)); done; printf flood-ok",
+        ]);
+        let session = Session::spawn(&profile, Size::new(80, 24), 100, Arc::new(|| {})).unwrap();
+        // Intentionally never drain session.events while thousands of OSC titles arrive.
+        wait_until(|| session.terminal.lock().unwrap().text().contains("flood-ok"));
     }
 
     #[test]
