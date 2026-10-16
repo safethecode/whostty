@@ -2,6 +2,7 @@ use eframe::egui::{self, Color32, FontFamily, FontId, TextFormat};
 use std::{
     io::Read,
     path::{Path, PathBuf},
+    sync::{Arc, Mutex},
 };
 use whostty_core::{alacritty_terminal::term::cell::Flags, config::Settings};
 
@@ -16,12 +17,16 @@ const NAMES: [&str; 4] = [
 pub struct Typography {
     native: [bool; 4],
     families: [FontFamily; 4],
+    pub shaping: Option<Arc<Mutex<crate::shaping::Renderer>>>,
+    pub ligatures: bool,
 }
 
 impl Default for Typography {
     fn default() -> Self {
         Self {
             native: [true, false, false, false],
+            shaping: None,
+            ligatures: true,
             families: std::array::from_fn(|index| {
                 if index == 0 {
                     FontFamily::Monospace
@@ -37,6 +42,12 @@ impl Typography {
     pub fn get(ctx: &egui::Context) -> Self {
         ctx.data_mut(|data| data.get_temp(egui::Id::new("terminal-typography")))
             .unwrap_or_default()
+    }
+
+    pub fn set_ligatures(ctx: &egui::Context, enabled: bool) {
+        let mut typography = Self::get(ctx);
+        typography.ligatures = enabled;
+        ctx.data_mut(|data| data.insert_temp(egui::Id::new("terminal-typography"), typography));
     }
 
     pub fn format(&self, flags: Flags, size: f32, color: Color32) -> (TextFormat, bool) {
@@ -219,6 +230,14 @@ pub fn configure_fonts(ctx: &egui::Context, settings: &Settings) -> Option<Strin
             }
         }
     }
+    let sources = std::array::from_fn(|style| {
+        fonts.families[&typography.families[style]]
+            .iter()
+            .filter_map(|name| fonts.font_data.get(name).cloned())
+            .collect()
+    });
+    typography.shaping = Some(Arc::new(Mutex::new(crate::shaping::Renderer::new(sources))));
+    typography.ligatures = settings.font_ligatures;
     ctx.set_fonts(fonts);
     ctx.data_mut(|data| data.insert_temp(egui::Id::new("terminal-typography"), typography));
     (!errors.is_empty()).then(|| errors.join("\n"))

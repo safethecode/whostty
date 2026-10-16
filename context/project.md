@@ -156,3 +156,22 @@ IME Disabled 이벤트도 GUI 입력 차단 여부와 무관하게 정리해, �
 키 바인딩 최종 검증은 Mac 53개/Windows 55개 테스트와 배포 ZIP의 DX12/CPU readback을 통과했다.
 후속 TUI 휠·IME 정리는 각각 별도 PR이며, 아직 shaping/고급 키보드 프로토콜이나 Windows 실기기 검증을 완료한 상태는 아니다.
 남은 구현·검증 순서는 quality.md를 따른다.
+
+PR #18(DEC 1007/휠 누적)과 #19(IME 포커스·순서)은 main에 병합했다. #19의 최종 검증은 Mac 54개/Windows 56개 테스트와 ZIP 실행 진단을 통과했다.
+
+## OpenType 글자 렌더링
+
+Rustybuzz로 LTR run을 shaping하고 ab_glyph로 OpenType glyph ID를 rasterize한 뒤 공유 GPU atlas에 그린다.
+행·색/스타일·블록 커서 경계를 지키고, 글꼴과 문자군을 나눈다. ligature·mark 위치를 원래 VT 셀 범위에 맞춰 배치한다.
+검색·복사·접근성은 원래 셀 데이터를 유지한다. 같은 glyph는 다시 업로드하지 않는다. font_ligatures 설정을 즉시 전환할 수 있다.
+이전과 같은 em 크기 환산, 빈 advancing placeholder glyph(Fira Code의 contextual ligature), synthetic 스타일·CJK fallback을 처리한다.
+
+레이아웃 캐시는 512개/추정 8 MiB, run은 8 KiB로 제한한다. atlas는 2048² RGBA, glyph metadata는 8192개까지다.
+가득 찬 atlas는 다음 egui pass에서만 비워 현재 pass의 UV를 덮지 않는다. 지원하지 않는 RTL/bidi·bitmap/color/SVG glyph와
+제한을 넘는 run은 기존 셀 렌더러로 표시한다. 전체 RTL/색상 emoji·복합 문자 호환성 또는 GPU 성능 동등성을 주장하지 않는다.
+
+테스트용 TTF는 직접 만든 도형/GSUB/GPOS fixture이며 scripts/make-shaping-fixture.py(fontTools 4.54.1)로 재생성한다.
+폰트 em과 ascender/descender 높이를 다르게 해서 크기 환산 회귀를 잡는다. Fira Code 6.2는 /tmp에만 받아 실제 화면 검증에 사용했고 배포하지 않는다.
+Mac 실제 창에서 화살표/비교 연산자 ligature와 옵션 off 전환, 결합 부호·한글 fallback·스타일·밑줄을 확인했다.
+--check는 shaped glyph가 실제로 그려진 횟수와 cache entry, 화면 배율도 보고하며 shaping 경로 미사용은 실패로 처리한다.
+Mac Metal readback도 shaped text·PTY·화면 픽셀 성공을 확인했다. Windows는 동일한 패키지 진단을 CI에서 실행한다.

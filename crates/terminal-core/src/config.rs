@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 #[serde(default, deny_unknown_fields)]
 pub struct Settings {
     pub font_size: f32,
+    pub font_ligatures: bool,
     pub scrollback: usize,
     pub default_profile: usize,
     pub inherit_working_directory: bool,
@@ -48,6 +49,7 @@ impl Default for Settings {
         )];
         Self {
             font_size: 15.0,
+            font_ligatures: true,
             scrollback: 10_000,
             default_profile: 0,
             inherit_working_directory: true,

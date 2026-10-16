@@ -741,6 +741,9 @@ impl Whostty {
         egui::Window::new("Preferences").open(&mut open).collapsible(false).resizable(false).default_width(420.0).show(ctx, |ui| {
             ui.label("Text");
             ui.add(egui::Slider::new(&mut self.settings.font_size, 8.0..=40.0).text("Font size"));
+            if ui.checkbox(&mut self.settings.font_ligatures, "Font ligatures").changed() {
+                crate::fonts::Typography::set_ligatures(ctx, self.settings.font_ligatures);
+            }
             ui.horizontal(|ui| {
                 use whostty_core::theme::{Theme, Preset};
                 ui.label("Terminal colors");

@@ -14,7 +14,7 @@ Ghostty의 주요 방향인 네이티브 UX, 탭·분할, 글자 처리, 다양�
 | 셸·세션 | Windows ConPTY / Mac PTY 통합 테스트, 독립 패널, 비동기 종료 | Windows 장시간 실행·대량 출력·WSL 프로세스 트리 종료 |
 | VT·TUI | Alacritty 엔진, ANSI/대체 화면/스크롤백, 키·마우스 회귀 테스트 | 실제 vim/neovim/less/tmux/PowerShell 편집과 앱별 회귀 자료 |
 | 입력 | 기본 키, bracketed paste, IME 조합 보류, AltGr 문자 전달 | Windows 한국어 IME·AltGr 실기기, 고급 키보드 프로토콜 |
-| 렌더링 | wgpu, 셀 스냅샷, 스타일 face·밑줄 장식·NFC, 폰트 fallback | ligature/복합 shaping, emoji, GPU 측정 |
+| 렌더링 | wgpu, 셀 스냅샷, 스타일 face·장식·LTR OpenType shaping/ligature/mark·glyph atlas·fallback | RTL/bidi, 색상 emoji, script별 복합 문자·DPI 실사용, GPU 성능 측정 |
 | 검색 | 백그라운드 취소·revision 검사·결합 부호/soft wrap 매칭 | 긴 단일 논리 행의 256 KiB 제한, Windows 실사용 |
 | 사용성 | 탭·중첩 분할·프로필·안전한 설정 저장·실행 옵션·웹 링크·테마·로컬 CWD 계승·키 바인딩 | 명령 탐색, WSL/SSH 경로 계승 |
 | 배포 | Windows ZIP·체크섬·고지·정적 CRT·네이티브 PTY/GPU readback 진단 | Windows 설치/업데이트·서명·ARM64, 실기기 설치/재실행 |
@@ -25,7 +25,7 @@ Ghostty 수준의 완성도를 달성했다고 결론 내릴 수 없다. 현재 
 
 ## 다음 개선 순서
 
-1. 셀별 글자 배치를 run 단위 shaping과 glyph cache로 개선한다. ligature·결합 부호·emoji·DPI·커서·선택의 좌표 일관성을 함께 검증해야 한다.
+1. LTR run shaping 기반을 확장해 RTL/bidi·색상 emoji·문자군별 fallback을 다룬다. 커서·선택·다중 배율과 실제 폰트의 회귀 자료를 더 쌓는다.
 2. 고급 키보드 프로토콜에 필요한 원래 키·수정키·누름/해제 정보를 보존한다. 백엔드가 잃는 정보를 확인하기 전에는 프로토콜 지원을 광고하지 않는다.
 3. 셸 명령 경계·명령 탐색, WSL/SSH의 작업 디렉터리 계승, Bash/Zsh 연동을 확장한다.
 4. Windows PC에서 IME/AltGr·다중 배율·Narrator·실제 TUI·장시간 출력/종료를 검증하고 재현 자료를 남긴다.
