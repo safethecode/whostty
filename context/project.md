@@ -20,3 +20,16 @@
 초기 범위는 실제 셸 실행, ANSI/truecolor, 대체 화면, 스크롤백, 탭, PowerShell/WSL 프로필,
 복사·붙여넣기, 크기 변경, 설정 파일이다. 분할 창, SSH 관리, GPU 성능 벤치마크,
 자동 업데이트, 코드 서명, Ghostty 호환성은 별도 후속 작업이다.
+
+## 검증 현황
+
+- PR #1: macOS 로컬 테스트 8개 및 Clippy 통과. GitHub Actions의 Windows/macOS 테스트도 통과.
+- 데스크톱: Rust 네이티브 창 + eframe/wgpu. Windows에서 DX12, macOS에서 Metal을 사용할 수 있다.
+- ANSI 16/256색·truecolor, 굵은 글꼴, 밑줄·취소선, wide/combining 문자, 커서 모양을 그린다.
+- 탭, 프로필 선택, 설정 재로드, 복사/붙여넣기, 마우스 선택, 스크롤백 및 TUI 마우스 보고를 제공한다.
+- 사용자 설정 기본 경로는 Windows `%APPDATA%\Whostty\config.toml`. `WHOSTTY_CONFIG` 환경변수로 재정의할 수 있다.
+- 잘못된 설정은 원본을 유지하고 오류를 표시한다. 시작 디렉터리는 기본적으로 홈 디렉터리다.
+- Windows 기본 프로필은 PowerShell 5, PowerShell 7, WSL, cmd. 추가 설치가 필요한 프로필은 선택 시 시작 오류를 표시한다.
+- OSC52 클립보드 접근은 비활성화했다. 키보드 복사·붙여넣기는 지원한다.
+- Windows IME·AltGr·DPI·GPU 드라이버와 PowerShell/WSL/TUI의 실제 UX는 Windows PC 검증이 필요하다.
+- macOS 실제 네이티브 창에서 ANSI 색상, 셸 명령 입력/출력, Ctrl+Shift+T 새 탭, 환경설정, 실행 중 세션 닫기 확인창을 수동 확인했다. 임시 테스트 설정/앱 번들은 저장소 밖에 두었다.

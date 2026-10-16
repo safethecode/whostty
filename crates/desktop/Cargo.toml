@@ -1,0 +1,12 @@
+[package]
+name = "whostty"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+eframe = { version = "=0.31.1", default-features = false, features = ["wgpu", "default_fonts", "accesskit"] }
+whostty-core = { path = "../terminal-core" }
+ttf-parser = "0.25"
+
