@@ -1,5 +1,6 @@
 [workspace]
-members = ["crates/terminal-core"]
+members = ["crates/terminal-core", "crates/desktop"]
+default-members = ["crates/desktop"]
 resolver = "2"
 
 [workspace.package]
