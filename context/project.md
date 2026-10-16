@@ -175,3 +175,7 @@ Rustybuzz로 LTR run을 shaping하고 ab_glyph로 OpenType glyph ID를 rasterize
 Mac 실제 창에서 화살표/비교 연산자 ligature와 옵션 off 전환, 결합 부호·한글 fallback·스타일·밑줄을 확인했다.
 --check는 shaped glyph가 실제로 그려진 횟수와 cache entry, 화면 배율도 보고하며 shaping 경로 미사용은 실패로 처리한다.
 Mac Metal readback도 shaped text·PTY·화면 픽셀 성공을 확인했다. Windows는 동일한 패키지 진단을 CI에서 실행한다.
+
+Shaped text의 CPU frame/mesh/tessellation 벤치마크는 ignored release 테스트로 분리했다.
+80×40 고정 ASCII run, warmup 10회 후 200프레임을 측정하며 GPU 제출·입력 지연을 포함하지 않는 것을 JSON에 명시한다.
+Mac 3회 기준값과 포함/제외 범위는 performance.md에 남긴다.

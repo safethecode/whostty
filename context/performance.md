@@ -47,3 +47,23 @@ Windows PC 측정값은 아직 없다.
 검색 전체 시간은 100ms 입력 debounce를 제외하고 작업 생성·스케줄링·poll을 포함한다.
 잠금 probe는 실행마다 64–66회이며 시스템의 최악 대기 시간을 보장하는 값은 아니다.
 GPU나 실제 GUI 입력 지연을 측정한 값으로 해석하지 않는다.
+
+## Shaped text CPU 제출 기준값
+
+```powershell
+cargo test --release --locked --package whostty shaping::tests::render_submission_benchmark -- --ignored --nocapture
+```
+
+동일 Mac/M3 Pro/Rust 1.88.0에서 연속 3회 실행했다. 기본 시스템 글꼴, 17pt, 1배율, 80열×40행 ASCII run을 그린다.
+초기 1회, warmup 10회, 측정 200프레임이며 각 실행의 p50/p95를 구했다. UI frame과 glyph mesh 생성·egui tessellation 비용이다.
+초기 수치는 지연 폰트 준비·CPU atlas 생성도 포함하며 configure_fonts의 파일 읽기는 그 전에 수행한다.
+PTY 파싱·grid snapshot·배경/장식·앱 chrome·GPU 업로드/제출·VSync·실제 입력 지연은 포함하지 않는다. 일반 데스크톱 부하는 격리하지 않았다.
+
+| 항목 | 3회 중앙값 | 3회 범위 |
+|---|---:|---:|
+| 첫 CPU frame | 8.674 ms | 8.607–15.946 ms |
+| warm CPU p50 | 0.176 ms | 0.175–0.202 ms |
+| warm CPU p95 | 0.181 ms | 0.180–0.235 ms |
+
+측정 후 cache는 glyph 35개와 layout 40개였다. GPU 프레임 시간이나 Ghostty 대비 수치로 해석하지 않는다.
+벤치마크는 기본 테스트에서 ignore되며 명시한 release 명령으로 실행한다. 시간 임계값으로 CI를 실패시키지 않는다.

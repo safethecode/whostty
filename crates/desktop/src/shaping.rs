@@ -542,6 +542,81 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "Explicit release CPU benchmark; not a GPU or input latency measurement"]
+    fn render_submission_benchmark() {
+        use std::time::Instant;
+        let ctx = egui::Context::default();
+        let settings = whostty_core::config::Settings::default();
+        let _ = crate::fonts::configure_fonts(&ctx, &settings);
+        let renderer = crate::fonts::Typography::get(&ctx).shaping.unwrap();
+        let rows: Vec<_> = (0..40)
+            .map(|row| {
+                let text = format!(
+                    "row={row:02} const result = input.map(value => value + 1); // terminal text "
+                );
+                let text: String = text
+                    .chars()
+                    .chain(std::iter::repeat(' '))
+                    .take(80)
+                    .collect();
+                Run {
+                    stops: text
+                        .char_indices()
+                        .enumerate()
+                        .map(|(column, (byte, _))| Stop { byte, column })
+                        .collect(),
+                    text,
+                    columns: 80,
+                }
+            })
+            .collect();
+        let draw = || {
+            let started = Instant::now();
+            let output = ctx.run(
+                egui::RawInput {
+                    screen_rect: Some(Rect::from_min_size(Pos2::ZERO, Vec2::new(1200.0, 1100.0))),
+                    ..Default::default()
+                },
+                |ctx| {
+                    let cell_width =
+                        ctx.fonts(|fonts| fonts.glyph_width(&egui::FontId::monospace(17.0), 'M'));
+                    let painter = ctx.layer_painter(egui::LayerId::background());
+                    let mut renderer = renderer.lock().unwrap();
+                    for (row, run) in rows.iter().enumerate() {
+                        assert!(renderer.paint(
+                            &painter,
+                            Paint {
+                                run,
+                                pos: Pos2::new(0.0, row as f32 * 24.0),
+                                size: 17.0,
+                                cell_width,
+                                style: 0,
+                                color: Color32::WHITE,
+                                ligatures: true,
+                                synthetic_bold: false,
+                                synthetic_italic: false
+                            }
+                        ));
+                    }
+                },
+            );
+            let _ = ctx.tessellate(output.shapes, ctx.pixels_per_point());
+            started.elapsed().as_secs_f64() * 1000.0
+        };
+        let cold_ms = draw();
+        for _ in 0..10 {
+            draw();
+        }
+        let mut samples: Vec<_> = (0..200).map(|_| draw()).collect();
+        samples.sort_by(f64::total_cmp);
+        let (glyphs, layouts, _) = renderer.lock().unwrap().diagnostics();
+        println!(
+            "{}",
+            serde_json::json!({"case":"shaped_render_cpu_submission","os":std::env::consts::OS,"arch":std::env::consts::ARCH,"release":!cfg!(debug_assertions),"columns":80,"rows":40,"warm_frames":200,"cold_ms":cold_ms,"warm_p50_ms":samples[100],"warm_p95_ms":samples[190],"glyphs_cached":glyphs,"layouts_cached":layouts,"gpu_submission_included":false,"input_latency_included":false})
+        );
+    }
+
+    #[test]
     fn opentype_ligatures_and_marks_keep_the_terminal_cell_extent() {
         let renderer = renderer();
         let ligature = renderer.shape(&key("fi", &[0, 1], 2, true)).unwrap();
