@@ -142,3 +142,8 @@ modifier를 정확하게 비교하며, IME 조합 중에는 단축키를 가로�
 단축키 뒤의 같은 이벤트 묶음에 든 Text가 셸로 새지 않는 것을 실제 PTY 테스트로 확인한다.
 
 Mac 네이티브 앱에서 설정한 F6로 새 탭을 만들고, 실행 중 F7로 바꿔 Reload config를 누른 뒤 목록과 실제 새 탭 동작이 F7로 바뀌는 것을 확인했다.
+
+TUI 휠 입력은 DEC 1007(Alternate Scroll)을 실제로 확인한다. 이를 끈 앱에는 휠로 화살표를 만들지 않으며,
+켰을 때만 대체 화면에서 normal/application cursor 시퀀스를 보낸다. 소수점 휠 누적은 TUI mouse/대체 화면/Shift
+대상이 바뀌거나 창 포커스를 잃으면 초기화해 이전 모드의 움직임이 다른 대상으로 새지 않게 한다.
+근거: [xterm Wheel mice](https://invisible-island.net/xterm/ctlseqs/ctlseqs.html#h2-Wheel-mice).

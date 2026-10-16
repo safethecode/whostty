@@ -24,6 +24,7 @@ pub const ACCENT: Color32 = Color32::from_rgb(151, 219, 174);
 #[derive(Default)]
 pub struct ViewState {
     wheel: f32,
+    wheel_context: Option<(TermMode, bool)>,
     cells: Vec<Indexed<Cell>>,
     mouse_buttons: u8,
     link_press: Option<(whostty_core::links::Link, Pos2)>,
@@ -282,6 +283,8 @@ pub fn show(
                 }
             }
             egui::Event::WindowFocused(false) => {
+                *wheel = 0.0;
+                state.wheel_context = None;
                 state.link_press = None;
                 let (column, row, _) = at(pointer.unwrap_or(rect.min));
                 for code in 0..3 {
@@ -300,6 +303,17 @@ pub fn show(
                 delta,
                 modifiers,
             } if response.hovered() => {
+                let wheel_mode = mode
+                    & (TermMode::ALT_SCREEN
+                        | TermMode::ALTERNATE_SCROLL
+                        | TermMode::MOUSE_MODE
+                        | TermMode::SGR_MOUSE
+                        | TermMode::UTF8_MOUSE);
+                let context = (wheel_mode, modifiers.shift);
+                if state.wheel_context != Some(context) {
+                    *wheel = 0.0;
+                    state.wheel_context = Some(context);
+                }
                 let lines = match unit {
                     egui::MouseWheelUnit::Point => delta.y / cell.y,
                     egui::MouseWheelUnit::Line => delta.y * 3.0,
@@ -325,7 +339,9 @@ pub fn show(
                             input.push(bytes);
                         }
                     }
-                } else if mode.contains(TermMode::ALT_SCREEN) && !modifiers.shift {
+                } else if mode.contains(TermMode::ALT_SCREEN | TermMode::ALTERNATE_SCROLL)
+                    && !modifiers.shift
+                {
                     let sequence: &[u8] = if count > 0 {
                         if mode.contains(TermMode::APP_CURSOR) {
                             b"\x1bOA"
@@ -843,6 +859,49 @@ mod tests {
                 "Link gesture leaked to the TUI"
             );
         }
+        let scroll = |delta, modifiers, unit| {
+            vec![
+                egui::Event::PointerMoved(Pos2::new(40.0, 40.0)),
+                egui::Event::MouseWheel {
+                    unit,
+                    delta: Vec2::new(0.0, delta),
+                    modifiers,
+                },
+            ]
+        };
+        let line = egui::MouseWheelUnit::Line;
+        let point = egui::MouseWheelUnit::Point;
+        let reports = frame(scroll(1.0, egui::Modifiers::NONE, line));
+        assert_eq!(reports.len(), 3);
+        assert!(reports
+            .iter()
+            .all(|bytes| bytes.starts_with(b"\x1b[<64;") && bytes.ends_with(b"M")));
+        terminal
+            .lock()
+            .unwrap()
+            .feed(b"\x1b[?1002l\x1b[?1049h\x1b[?1007l");
+        assert!(
+            frame(scroll(1.0, egui::Modifiers::NONE, line)).is_empty(),
+            "Disabled alternate scrolling must not send arrow keys"
+        );
+        terminal.lock().unwrap().feed(b"\x1b[?1007h");
+        assert_eq!(
+            frame(scroll(1.0, egui::Modifiers::NONE, line)),
+            [b"\x1b[A".repeat(3)]
+        );
+        terminal.lock().unwrap().feed(b"\x1b[?1h");
+        assert_eq!(
+            frame(scroll(-1.0, egui::Modifiers::NONE, line)),
+            [b"\x1bOB".repeat(3)]
+        );
+        assert!(frame(scroll(1.0, egui::Modifiers::SHIFT, line)).is_empty());
+        assert!(frame(scroll(12.6, egui::Modifiers::NONE, point)).is_empty());
+        // A fractional wheel delta from arrow mode must not become a TUI mouse event.
+        terminal.lock().unwrap().feed(b"\x1b[?1002h");
+        assert!(frame(scroll(12.6, egui::Modifiers::NONE, point)).is_empty());
+        let reports = frame(scroll(12.6, egui::Modifiers::NONE, point));
+        assert_eq!(reports.len(), 1);
+        assert!(reports[0].starts_with(b"\x1b[<64;") && reports[0].ends_with(b"M"));
         assert_eq!(opened, ["https://example.com/"]);
     }
 }
