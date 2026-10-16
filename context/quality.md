@@ -16,7 +16,7 @@ Ghostty의 주요 방향인 네이티브 UX, 탭·분할, 글자 처리, 다양�
 | 입력 | 기본 키, bracketed paste, IME 조합 보류, AltGr 문자 전달 | Windows 한국어 IME·AltGr 실기기, 고급 키보드 프로토콜 |
 | 렌더링 | wgpu, 셀 스냅샷, 스타일 face·밑줄 장식·NFC, 폰트 fallback | ligature/복합 shaping, emoji, GPU 측정 |
 | 검색 | 백그라운드 취소·revision 검사·결합 부호/soft wrap 매칭 | 긴 단일 논리 행의 256 KiB 제한, Windows 실사용 |
-| 사용성 | 탭·중첩 분할·프로필·설정 | 링크, 명령 탐색, 작업 디렉터리 계승, 키 바인딩·테마 |
+| 사용성 | 탭·중첩 분할·프로필·설정·실행 옵션·웹 링크 | 명령 탐색, 현재 작업 디렉터리 계승, 키 바인딩·테마 |
 | 배포 | Windows ZIP·체크섬·고지·정적 CRT·CI | Windows 설치/업데이트·서명·ARM64, 실기기 설치/재실행 |
 | 접근성 | 기본 UI AccessKit | 터미널 텍스트·선택·커서의 스크린리더 검증 |
 

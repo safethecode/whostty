@@ -26,6 +26,7 @@ pub struct ViewState {
     wheel: f32,
     cells: Vec<Indexed<Cell>>,
     mouse_buttons: u8,
+    link_press: Option<(whostty_core::links::Link, Pos2)>,
 }
 
 struct Snapshot {
@@ -58,6 +59,7 @@ pub struct View {
     pub response: Response,
     pub input: Vec<Vec<u8>>,
     pub error: Option<String>,
+    pub open_url: Option<String>,
 }
 
 pub fn show(
@@ -98,6 +100,7 @@ pub fn show(
     );
     let error = session.resize(size).err().map(|error| format!("{error:#}"));
     let mut input = Vec::new();
+    let mut open_url = None;
     let terminal_arc = session.terminal.clone();
     let mut terminal = terminal_arc
         .lock()
@@ -124,7 +127,26 @@ pub fn show(
         (column.min(size.columns - 1), row.min(size.rows - 1), side)
     };
 
-    if !mouse || shift {
+    let link_at = |pos| {
+        let (column, row, _) = at(pos);
+        whostty_core::links::at(
+            term,
+            viewport_to_point(
+                term.grid().display_offset(),
+                Point::new(row, Column(column)),
+            ),
+        )
+    };
+    let hovered_link = pointer
+        .filter(|pos| {
+            rect.contains(*pos) && ui.input(|input| input.modifiers.ctrl && !input.modifiers.shift)
+        })
+        .and_then(link_at);
+    let link_gesture = state.link_press.is_some() || events.iter().any(|event| {
+        matches!(event, egui::Event::PointerButton { pos, button: egui::PointerButton::Primary, pressed: true, modifiers } if modifiers.ctrl && !modifiers.shift && rect.contains(*pos) && link_at(*pos).is_some())
+    });
+
+    if (!mouse || shift) && !link_gesture {
         if let Some(pos) = response.interact_pointer_pos() {
             let (column, row, side) = at(pos);
             let point = viewport_to_point(
@@ -157,6 +179,44 @@ pub fn show(
     }
 
     for event in &events {
+        if let egui::Event::PointerButton {
+            pos,
+            button: egui::PointerButton::Primary,
+            pressed,
+            modifiers,
+        } = event
+        {
+            if *pressed && modifiers.ctrl && !modifiers.shift && rect.contains(*pos) {
+                let (column, row, _) = at(*pos);
+                let point = viewport_to_point(
+                    term.grid().display_offset(),
+                    Point::new(row, Column(column)),
+                );
+                if let Some(link) = whostty_core::links::at(term, point) {
+                    state.link_press = Some((link, *pos));
+                    continue;
+                }
+            } else if !pressed {
+                if let Some((link, origin)) = state.link_press.take() {
+                    let (column, row, _) = at(*pos);
+                    let point = viewport_to_point(
+                        term.grid().display_offset(),
+                        Point::new(row, Column(column)),
+                    );
+                    if rect.contains(*pos)
+                        && origin.distance(*pos) < 6.0
+                        && whostty_core::links::at(term, point)
+                            .is_some_and(|target| target.uri == link.uri)
+                    {
+                        open_url = Some(link.uri);
+                    }
+                    continue;
+                }
+            }
+        }
+        if state.link_press.is_some() && matches!(event, egui::Event::PointerMoved(_)) {
+            continue;
+        }
         match event {
             egui::Event::PointerButton {
                 pos,
@@ -210,6 +270,7 @@ pub fn show(
                 }
             }
             egui::Event::WindowFocused(false) => {
+                state.link_press = None;
                 let (column, row, _) = at(pointer.unwrap_or(rect.min));
                 for code in 0..3 {
                     if state.mouse_buttons & (1 << code) != 0 {
@@ -284,6 +345,13 @@ pub fn show(
     } = capture(term, state);
     // Text layout and GPU shape construction must not hold up PTY parsing.
     drop(terminal);
+    let response = if let Some(link) = &hovered_link {
+        response
+            .on_hover_cursor(egui::CursorIcon::PointingHand)
+            .on_hover_text(format!("{}\nCtrl+click to open", link.uri))
+    } else {
+        response
+    };
     let focused = response.has_focus() && ui.input(|i| i.focused);
     let typography = crate::fonts::Typography::get(ui.ctx());
     let cursor_wide = state
@@ -391,6 +459,18 @@ pub fn show(
                 .map(|color| resolve_color(color, &colors))
                 .unwrap_or(fg);
             paint_underline(&painter, cell_rect, flags, underline);
+            if hovered_link
+                .as_ref()
+                .is_some_and(|link| link.range.contains(&indexed.point))
+            {
+                painter.line_segment(
+                    [
+                        cell_rect.left_bottom() - Vec2::new(0.0, 1.0),
+                        cell_rect.right_bottom() - Vec2::new(0.0, 1.0),
+                    ],
+                    Stroke::new(1.0, ACCENT),
+                );
+            }
         }
         if flags.contains(Flags::STRIKEOUT) && !flags.contains(Flags::HIDDEN) {
             painter.line_segment(
@@ -460,6 +540,7 @@ pub fn show(
         response,
         input,
         error,
+        open_url,
     }
 }
 
@@ -710,8 +791,10 @@ mod tests {
             .lock()
             .unwrap()
             .feed(b"\x1b[?1002h\x1b[?1006h");
+        let terminal = session.terminal.clone();
         let ctx = egui::Context::default();
         let mut state = ViewState::default();
+        let mut opened = Vec::new();
         let mut frame = |events| {
             let mut reports = Vec::new();
             let _ = ctx.run(
@@ -726,9 +809,10 @@ mod tests {
                             egui::UiBuilder::new()
                                 .max_rect(Rect::from_min_size(Pos2::ZERO, Vec2::new(250.0, 180.0))),
                             |ui| {
-                                reports.extend(
-                                    show(ui, &mut session, 15.0, "", false, &mut state, None).input,
-                                );
+                                let view =
+                                    show(ui, &mut session, 15.0, "", false, &mut state, None);
+                                reports.extend(view.input);
+                                opened.extend(view.open_url);
                             },
                         );
                     });
@@ -761,5 +845,22 @@ mod tests {
             .iter()
             .any(|bytes| bytes.starts_with(b"\x1b[<6;") && bytes.ends_with(b"m")));
         assert!(frame(vec![egui::Event::PointerMoved(Pos2::new(420.0, 40.0))]).is_empty());
+        terminal
+            .lock()
+            .unwrap()
+            .feed(b"\x1b[2;1H\x1b]8;;https://example.com\x1b\\linked label\x1b]8;;\x1b\\");
+        for pressed in [true, false] {
+            assert!(
+                frame(vec![egui::Event::PointerButton {
+                    pos: Pos2::new(40.0, 40.0),
+                    button: egui::PointerButton::Primary,
+                    pressed,
+                    modifiers: egui::Modifiers::CTRL
+                }])
+                .is_empty(),
+                "Link gesture leaked to the TUI"
+            );
+        }
+        assert_eq!(opened, ["https://example.com/"]);
     }
 }
