@@ -1,15 +1,17 @@
 use std::{
     io::{Read, Write},
     sync::{
-        mpsc::{self, Receiver, SyncSender},
+        atomic::{AtomicBool, Ordering},
+        mpsc::{self, Receiver, RecvTimeoutError, Sender, SyncSender},
         Arc, Mutex,
     },
     thread,
+    time::Duration,
 };
 
 use alacritty_terminal::event::{Event, EventListener};
 use anyhow::{Context, Result};
-use portable_pty::{native_pty_system, ChildKiller, CommandBuilder, MasterPty, PtySize};
+use portable_pty::{native_pty_system, CommandBuilder, MasterPty, PtySize};
 
 use crate::{
     config::Profile,
@@ -21,6 +23,12 @@ pub enum SessionEvent {
     Terminal(Event),
     Exited(u32),
     Error(String),
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum ExitState {
+    Exited(u32),
+    Failed(String),
 }
 
 #[derive(Clone)]
@@ -47,9 +55,11 @@ impl EventListener for Listener {
 pub struct Session {
     pub terminal: Arc<Mutex<Terminal<Listener>>>,
     pub events: Receiver<SessionEvent>,
-    master: Box<dyn MasterPty + Send>,
+    master: Option<Box<dyn MasterPty + Send>>,
     input: SyncSender<Vec<u8>>,
-    killer: Box<dyn ChildKiller + Send + Sync>,
+    shutdown: Sender<Box<dyn MasterPty + Send>>,
+    finished: Arc<AtomicBool>,
+    exit: Arc<Mutex<Option<ExitState>>>,
     size: Size,
 }
 
@@ -80,11 +90,13 @@ impl Session {
             .slave
             .spawn_command(command)
             .with_context(|| format!("Start {} ({})", profile.name, profile.program))?;
-        let killer = child.clone_killer();
         drop(pair.slave);
 
         let (events_tx, events) = mpsc::sync_channel(1024);
         let (input, input_rx) = mpsc::sync_channel::<Vec<u8>>(64);
+        let (shutdown, shutdown_rx) = mpsc::channel::<Box<dyn MasterPty + Send>>();
+        let finished = Arc::new(AtomicBool::new(false));
+        let exit = Arc::new(Mutex::new(None));
         let terminal = Arc::new(Mutex::new(Terminal::new(
             size,
             scrollback,
@@ -96,8 +108,14 @@ impl Session {
 
         let writer_events = events_tx.clone();
         let writer_wake = wake.clone();
+        let writer_finished = finished.clone();
         thread::spawn(move || {
-            while let Ok(bytes) = input_rx.recv() {
+            while !writer_finished.load(Ordering::Acquire) {
+                let bytes = match input_rx.recv_timeout(Duration::from_millis(100)) {
+                    Ok(bytes) => bytes,
+                    Err(RecvTimeoutError::Timeout) => continue,
+                    Err(RecvTimeoutError::Disconnected) => break,
+                };
                 if let Err(error) = writer.write_all(&bytes).and_then(|()| writer.flush()) {
                     let _ =
                         writer_events.try_send(SessionEvent::Error(format!("PTY write: {error}")));
@@ -137,25 +155,72 @@ impl Session {
             }
         });
 
+        let child_finished = finished.clone();
+        let child_exit = exit.clone();
         thread::spawn(move || {
-            let event = match child.wait() {
-                Ok(status) => SessionEvent::Exited(status.exit_code()),
-                Err(error) => SessionEvent::Error(format!("Wait for shell: {error}")),
-            };
-            let _ = events_tx.send(event);
-            wake();
+            // This thread alone owns/reaps the process, preventing signals to a reused PID.
+            // After natural exit it sleeps on the shutdown channel until the pane is closed.
+            let mut exited = false;
+            let mut reaped = false;
+            loop {
+                if !exited {
+                    let outcome = match poll_child(child.as_mut()) {
+                        Ok(Some(status)) => Some(ExitState::Exited(status.exit_code())),
+                        Ok(None) => None,
+                        Err(error) => Some(ExitState::Failed(format!("Wait for shell: {error}"))),
+                    };
+                    if let Some(outcome) = outcome {
+                        reaped = matches!(outcome, ExitState::Exited(_));
+                        let event = match &outcome {
+                            ExitState::Exited(code) => SessionEvent::Exited(*code),
+                            ExitState::Failed(error) => SessionEvent::Error(error.clone()),
+                        };
+                        *child_exit.lock().unwrap_or_else(|e| e.into_inner()) = Some(outcome);
+                        child_finished.store(true, Ordering::Release);
+                        // The status cell remains observable even when terminal events fill the queue.
+                        let _ = events_tx.try_send(event);
+                        wake();
+                        exited = true;
+                    }
+                }
+                let master = if exited {
+                    shutdown_rx.recv().ok()
+                } else {
+                    match shutdown_rx.recv_timeout(Duration::from_millis(100)) {
+                        Ok(master) => Some(master),
+                        Err(RecvTimeoutError::Timeout) => continue,
+                        Err(RecvTimeoutError::Disconnected) => None,
+                    }
+                };
+                child_finished.store(true, Ordering::Release);
+                if !reaped {
+                    let _ = child.kill();
+                }
+                // Closing ConPTY can block until output drains; keep it off the GUI thread.
+                drop(master);
+                if !reaped {
+                    let _ = child.wait();
+                }
+                break;
+            }
         });
         Ok(Self {
             terminal,
             events,
-            master: pair.master,
+            master: Some(pair.master),
             input,
-            killer,
+            shutdown,
+            finished,
+            exit,
             size,
         })
     }
 
     pub fn write(&self, bytes: Vec<u8>) -> Result<()> {
+        anyhow::ensure!(
+            !self.finished.load(Ordering::Acquire),
+            "The shell has exited"
+        );
         self.input
             .try_send(bytes)
             .context("PTY input queue is full or the session has closed")
@@ -174,7 +239,13 @@ impl Session {
                 .map_err(|_| anyhow::anyhow!("Terminal lock poisoned"))?;
             terminal.resize(size);
         }
-        self.master.resize(pty_size(size)).context("Resize PTY")?;
+        if !self.finished.load(Ordering::Acquire) {
+            self.master
+                .as_ref()
+                .unwrap()
+                .resize(pty_size(size))
+                .context("Resize PTY")?;
+        }
         self.size = size;
         Ok(())
     }
@@ -182,13 +253,52 @@ impl Session {
     pub fn size(&self) -> Size {
         self.size
     }
+
+    pub fn exit_state(&self) -> Option<ExitState> {
+        self.exit
+            .lock()
+            .unwrap_or_else(|error| error.into_inner())
+            .clone()
+    }
 }
 
 impl Drop for Session {
     fn drop(&mut self) {
-        // The wait thread reaps the process. Do not block the GUI while waiting for exit.
-        let _ = self.killer.kill();
+        self.finished.store(true, Ordering::Release);
+        if let Some(master) = self.master.take() {
+            if let Err(error) = self.shutdown.send(master) {
+                // Also keep destruction off the GUI if the process worker failed unexpectedly.
+                thread::spawn(move || drop(error.0));
+            }
+        }
     }
+}
+
+fn poll_child(
+    child: &mut dyn portable_pty::Child,
+) -> std::io::Result<Option<portable_pty::ExitStatus>> {
+    #[cfg(windows)]
+    {
+        use windows_sys::Win32::{
+            Foundation::{WAIT_FAILED, WAIT_OBJECT_0, WAIT_TIMEOUT},
+            System::Threading::WaitForSingleObject,
+        };
+        let handle = child
+            .as_raw_handle()
+            .ok_or_else(|| std::io::Error::other("The shell has no Windows process handle"))?;
+        // The worker owns the child throughout this nonblocking handle check. Checking the
+        // signal avoids portable-pty 0.9 treating an actual exit code 259 as STILL_ACTIVE.
+        match unsafe { WaitForSingleObject(handle, 0) } {
+            WAIT_OBJECT_0 => child.wait().map(Some),
+            WAIT_TIMEOUT => Ok(None),
+            WAIT_FAILED => Err(std::io::Error::last_os_error()),
+            value => Err(std::io::Error::other(format!(
+                "Unexpected process wait result: {value}"
+            ))),
+        }
+    }
+    #[cfg(not(windows))]
+    child.try_wait()
 }
 
 fn pty_size(size: Size) -> PtySize {
@@ -293,6 +403,7 @@ mod tests {
         let session = Session::spawn(&profile, Size::new(80, 24), 100, Arc::new(|| {})).unwrap();
         // Intentionally never drain session.events while thousands of OSC titles arrive.
         wait_until(|| session.terminal.lock().unwrap().text().contains("flood-ok"));
+        wait_until(|| session.exit_state() == Some(ExitState::Exited(0)));
     }
 
     #[test]
@@ -322,5 +433,61 @@ mod tests {
                 .text()
                 .contains("resize-finished")
         });
+    }
+
+    #[test]
+    fn closing_a_live_session_releases_its_reader_without_joining_the_ui() {
+        #[cfg(windows)]
+        let profile = Profile::new(
+            "shutdown",
+            "powershell.exe",
+            &[
+                "-NoLogo",
+                "-NoProfile",
+                "-Command",
+                "[Console]::Write('shutdown-ready'); Start-Sleep 60",
+            ],
+        );
+        #[cfg(not(windows))]
+        let profile = Profile::new(
+            "shutdown",
+            "/bin/sh",
+            &[
+                "-c",
+                "trap '' HUP; printf shutdown-ready; while :; do sleep 1; done",
+            ],
+        );
+        let session = Session::spawn(&profile, Size::new(80, 24), 100, Arc::new(|| {})).unwrap();
+        wait_until(|| {
+            session
+                .terminal
+                .lock()
+                .unwrap()
+                .text()
+                .contains("shutdown-ready")
+        });
+        let terminal = Arc::downgrade(&session.terminal);
+        let workers = Arc::downgrade(&session.finished);
+        let start = Instant::now();
+        drop(session);
+        assert!(
+            start.elapsed() < Duration::from_millis(500),
+            "Session drop blocked the caller"
+        );
+        wait_until(|| terminal.upgrade().is_none());
+        wait_until(|| workers.upgrade().is_none());
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn windows_exit_code_259_is_not_mistaken_for_a_live_process() {
+        let profile = Profile::new(
+            "exit-259",
+            "powershell.exe",
+            &["-NoLogo", "-NoProfile", "-Command", "exit 259"],
+        );
+        let session = Session::spawn(&profile, Size::new(80, 24), 100, Arc::new(|| {})).unwrap();
+        wait_until(|| session.exit_state() == Some(ExitState::Exited(259)));
+        assert!(session.write(b"input-after-exit\r".to_vec()).is_err());
     }
 }

@@ -13,7 +13,7 @@ use whostty_core::{
     },
     config::{Profile, Settings},
     input::{self, Key, Modifiers},
-    session::{Session, SessionEvent},
+    session::{ExitState, Session, SessionEvent},
     terminal::Size,
 };
 
@@ -21,6 +21,7 @@ use whostty_core::{
 enum Close {
     Tab(usize),
     Pane(usize, PaneId),
+    Restart(usize, PaneId),
     Window,
 }
 
@@ -117,7 +118,7 @@ impl Whostty {
             error,
             exit: None,
             bell: false,
-            wheel: 0.0,
+            view: Default::default(),
             search: Default::default(),
         }
     }
@@ -299,6 +300,11 @@ impl Whostty {
             let Some(session) = &tab.session else {
                 continue;
             };
+            match session.exit_state() {
+                Some(ExitState::Exited(code)) => tab.exit = Some(code),
+                Some(ExitState::Failed(error)) => tab.error = Some(error),
+                None => {}
+            }
             let events: Vec<_> = session.events.try_iter().take(512).collect();
             if events.len() == 512 {
                 ctx.request_repaint();
@@ -866,7 +872,7 @@ impl eframe::App for Whostty {
                         if let Some(error) = &pane.error {
                             ui.colored_label(Color32::LIGHT_RED, error);
                         }
-                        if pane.session.is_none() || pane.exit.is_some() {
+                        if pane.session.is_none() || pane.exit.is_some() || pane.error.is_some() {
                             let label = if pane.session.is_none() {
                                 "Retry profile"
                             } else {
@@ -884,7 +890,7 @@ impl eframe::App for Whostty {
                                 self.settings.font_size,
                                 if active { &self.composition } else { "" },
                                 self.focus_terminal && active && !blocked,
-                                &mut pane.wheel,
+                                &mut pane.view,
                                 self.search_open.then_some(&pane.search),
                             );
                             if result.response.clicked() || result.response.drag_started() {
@@ -938,7 +944,11 @@ impl eframe::App for Whostty {
             self.request_close_pane(self.active, id);
         }
         if restart_pane {
-            self.restart_pane(ctx);
+            if let Some(pane) = self.pane().filter(|pane| pane.running()) {
+                self.close = Some(Close::Restart(self.active, pane.id));
+            } else {
+                self.restart_pane(ctx);
+            }
         }
         if let Some(index) = new_profile {
             self.open_profile(index, ctx);
@@ -956,11 +966,15 @@ impl eframe::App for Whostty {
                     Close::Window => "Close Whostty?",
                     Close::Tab(_) => "Close this terminal?",
                     Close::Pane(_, _) => "Close this pane?",
+                    Close::Restart(_, _) => "Restart this pane?",
                 });
                 ui.label(match close {
                     Close::Window => "Closing Whostty will end all running sessions.",
                     Close::Tab(_) => "Closing this tab will end all its running sessions.",
                     Close::Pane(_, _) => "Closing this pane will end its running session.",
+                    Close::Restart(_, _) => {
+                        "Restarting will end the current session and clear its output."
+                    }
                 });
                 ui.add_space(12.0);
                 ui.horizontal(|ui| {
@@ -968,10 +982,22 @@ impl eframe::App for Whostty {
                         self.close = None;
                         self.focus_terminal = true;
                     }
-                    if ui.button("End sessions and close").clicked() {
+                    if ui
+                        .button(if matches!(close, Close::Restart(..)) {
+                            "Restart session"
+                        } else {
+                            "End sessions and close"
+                        })
+                        .clicked()
+                    {
                         match close {
                             Close::Tab(index) => self.close_tab(index),
                             Close::Pane(tab, id) => self.close_pane(tab, id),
+                            Close::Restart(tab, id) => {
+                                self.active = tab;
+                                self.tabs[tab].active = id;
+                                self.restart_pane(ctx);
+                            }
                             Close::Window => {
                                 self.allow_close = true;
                                 ctx.send_viewport_cmd(egui::ViewportCommand::Close);
