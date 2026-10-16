@@ -1,4 +1,5 @@
 pub mod config;
+mod directory;
 pub mod input;
 pub mod links;
 pub mod mouse;

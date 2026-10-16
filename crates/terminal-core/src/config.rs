@@ -9,6 +9,7 @@ pub struct Settings {
     pub font_size: f32,
     pub scrollback: usize,
     pub default_profile: usize,
+    pub inherit_working_directory: bool,
     pub font_path: Option<PathBuf>,
     pub font_bold_path: Option<PathBuf>,
     pub font_italic_path: Option<PathBuf>,
@@ -25,14 +26,16 @@ pub struct Profile {
     #[serde(default)]
     pub args: Vec<String>,
     pub working_directory: Option<PathBuf>,
+    #[serde(default)]
+    pub shell_integration: bool,
 }
 
 impl Default for Settings {
     fn default() -> Self {
         #[cfg(windows)]
         let profiles = vec![
-            Profile::new("PowerShell", "powershell.exe", &["-NoLogo"]),
-            Profile::new("PowerShell 7", "pwsh.exe", &["-NoLogo"]),
+            Profile::powershell("PowerShell", "powershell.exe"),
+            Profile::powershell("PowerShell 7", "pwsh.exe"),
             Profile::new("WSL", "wsl.exe", &["--cd", "~"]),
             Profile::new("Command Prompt", "cmd.exe", &[]),
         ];
@@ -46,6 +49,7 @@ impl Default for Settings {
             font_size: 15.0,
             scrollback: 10_000,
             default_profile: 0,
+            inherit_working_directory: true,
             font_path: None,
             font_bold_path: None,
             font_italic_path: None,
@@ -57,12 +61,37 @@ impl Default for Settings {
 }
 
 impl Profile {
+    #[cfg(windows)]
+    fn powershell(name: &str, program: &str) -> Self {
+        let mut profile = Self::new(name, program, &["-NoLogo"]);
+        profile.shell_integration = true;
+        profile
+    }
+
+    pub fn supports_shell_integration(&self) -> bool {
+        let name = Path::new(&self.program)
+            .file_name()
+            .and_then(|name| name.to_str())
+            .unwrap_or("")
+            .to_ascii_lowercase();
+        matches!(
+            name.as_str(),
+            "powershell.exe" | "powershell" | "pwsh.exe" | "pwsh"
+        ) && self.args.iter().all(|arg| {
+            matches!(
+                arg.to_ascii_lowercase().as_str(),
+                "-nologo" | "-noprofile" | "-noexit"
+            )
+        })
+    }
+
     pub fn new(name: &str, program: &str, args: &[&str]) -> Self {
         Self {
             name: name.into(),
             program: program.into(),
             args: args.iter().map(|arg| (*arg).into()).collect(),
             working_directory: None,
+            shell_integration: false,
         }
     }
 }
@@ -103,6 +132,9 @@ impl Settings {
             bail!("default_profile must refer to an existing profile");
         }
         for profile in &self.profiles {
+            if profile.shell_integration && !profile.supports_shell_integration() {
+                bail!("shell_integration requires an interactive PowerShell profile with only -NoLogo, -NoProfile or -NoExit arguments");
+            }
             if profile.name.trim().is_empty() || profile.program.trim().is_empty() {
                 bail!("Each profile needs a name and program");
             }
@@ -127,6 +159,30 @@ mod tests {
         );
         settings.default_profile = 99;
         assert!(settings.save(&path).is_err());
+    }
+
+    #[test]
+    fn shell_integration_accepts_only_interactive_powershell_profiles() {
+        let mut settings = Settings {
+            profiles: vec![Profile::new(
+                "PowerShell",
+                "powershell.exe",
+                &["-NoLogo", "-NoProfile"],
+            )],
+            default_profile: 0,
+            ..Settings::default()
+        };
+        settings.profiles[0].shell_integration = true;
+        assert!(settings.validate().is_ok());
+        settings.profiles[0]
+            .args
+            .extend(["-Command".into(), "exit 7".into()]);
+        assert!(settings.validate().is_err());
+        settings.profiles[0].shell_integration = false;
+        assert!(settings.validate().is_ok());
+        let restored: Settings = toml::from_str(&toml::to_string(&settings).unwrap()).unwrap();
+        assert!(restored.inherit_working_directory);
+        assert!(!restored.profiles[0].shell_integration);
     }
 
     #[test]

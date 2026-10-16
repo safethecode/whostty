@@ -37,6 +37,7 @@ pub struct Terminal<T: EventListener> {
     pub term: Term<T>,
     parser: Processor,
     revision: u64,
+    directory: crate::directory::Directory,
 }
 
 impl<T: EventListener> Terminal<T> {
@@ -50,12 +51,18 @@ impl<T: EventListener> Terminal<T> {
             term: Term::new(config, &size, listener),
             parser: Processor::new(),
             revision: 0,
+            directory: Default::default(),
         }
     }
 
     pub fn feed(&mut self, bytes: &[u8]) {
+        self.directory.feed(bytes);
         self.parser.advance(&mut self.term, bytes);
         self.revision = self.revision.wrapping_add(1);
+    }
+
+    pub fn working_directory(&self) -> Option<&std::path::Path> {
+        self.directory.current()
     }
 
     pub fn revision(&self) -> u64 {

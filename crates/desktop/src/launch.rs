@@ -94,6 +94,7 @@ impl Launch {
                 .unwrap_or_else(|| std::ffi::OsStr::new(program))
                 .to_string_lossy()
                 .into_owned();
+            profile.shell_integration = false;
             profile.program.clone_from(program);
             profile.args.clone_from(args);
         }

@@ -3625,8 +3625,10 @@ version = "0.1.0"
 dependencies = [
  "eframe",
  "serde_json",
+ "tempfile",
  "ttf-parser",
  "unicode-normalization",
+ "url",
  "wgpu",
  "whostty-core",
  "windows-sys 0.59.0",
@@ -3640,6 +3642,7 @@ dependencies = [
  "alacritty_terminal",
  "anyhow",
  "dirs",
+ "memchr",
  "portable-pty",
  "regex",
  "serde",

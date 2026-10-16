@@ -99,6 +99,36 @@ impl Whostty {
         }
     }
 
+    fn new_tab(&mut self, ctx: &egui::Context) {
+        let mut profile = self.settings.profiles[self.settings.default_profile].clone();
+        // An explicit profile directory remains authoritative for a new tab.
+        if profile.working_directory.is_none() {
+            self.inherit_directory(&mut profile);
+        }
+        self.open(profile, ctx);
+    }
+
+    fn inherit_directory(&self, profile: &mut Profile) {
+        if !self.settings.inherit_working_directory {
+            return;
+        }
+        let Some(pane) = self.pane() else {
+            return;
+        };
+        // Never translate a WSL/SSH/container directory into another process environment.
+        if profile.program != pane.profile.program || profile.args != pane.profile.args {
+            return;
+        }
+        if let Some(path) = pane
+            .session
+            .as_ref()
+            .and_then(Session::working_directory)
+            .filter(|path| path.is_dir())
+        {
+            profile.working_directory = Some(path);
+        }
+    }
+
     fn open(&mut self, profile: Profile, ctx: &egui::Context) {
         let pane = self.spawn_pane(profile, ctx);
         self.tabs.push(Tab::new(pane));
@@ -158,7 +188,8 @@ impl Whostty {
                 return;
             }
         }
-        let profile = tab.pane().profile.clone();
+        let mut profile = tab.pane().profile.clone();
+        self.inherit_directory(&mut profile);
         let pane = self.spawn_pane(profile, ctx);
         self.tabs[self.active].split(pane, axis);
         self.focus_terminal = true;
@@ -526,7 +557,7 @@ impl Whostty {
                     continue;
                 }
                 if modifiers.ctrl && modifiers.shift && *key == egui::Key::T {
-                    self.open_profile(self.settings.default_profile, ctx);
+                    self.new_tab(ctx);
                     continue;
                 }
                 if modifiers.ctrl && modifiers.shift && *key == egui::Key::W {
@@ -682,6 +713,7 @@ impl Whostty {
                 if matches!(self.settings.theme, Theme::Custom(_)) { ui.label("Custom (config)"); }
             });
             ui.add_space(12.0); ui.label("New tabs");
+            ui.checkbox(&mut self.settings.inherit_working_directory, "Inherit the active terminal’s directory");
             let selected = self.settings.profiles[self.settings.default_profile].name.clone();
             egui::ComboBox::from_id_salt("default-profile").selected_text(selected).show_ui(ui, |ui| {
                 for (index, profile) in self.settings.profiles.iter().enumerate() { ui.selectable_value(&mut self.settings.default_profile, index, &profile.name); }
@@ -787,12 +819,12 @@ impl eframe::App for Whostty {
                         .on_hover_text("New tab · Ctrl+Shift+T")
                         .clicked()
                     {
-                        new_profile = Some(self.settings.default_profile);
+                        new_profile = Some((self.settings.default_profile, true));
                     }
                     ui.menu_button("v", |ui| {
                         for (index, profile) in self.settings.profiles.iter().enumerate() {
                             if ui.button(&profile.name).clicked() {
-                                new_profile = Some(index);
+                                new_profile = Some((index, false));
                                 ui.close_menu();
                             }
                         }
@@ -827,8 +859,12 @@ impl eframe::App for Whostty {
                     }
                 });
             });
-        if let Some(index) = new_profile.take() {
-            self.open_profile(index, ctx);
+        if let Some((index, inherit)) = new_profile.take() {
+            if inherit {
+                self.new_tab(ctx);
+            } else {
+                self.open_profile(index, ctx);
+            }
         }
         if let Some(axis) = split_axis {
             self.split(axis, ctx);
@@ -852,6 +888,16 @@ impl eframe::App for Whostty {
                         ui.label(RichText::new(&tab.profile.name).small().color(ACCENT));
                         if let Some(session) = &tab.session {
                             let size = session.size();
+                            if let Some(directory) = session.working_directory() {
+                                let label = directory
+                                    .file_name()
+                                    .unwrap_or(directory.as_os_str())
+                                    .to_string_lossy();
+                                let label: String =
+                                    label.chars().filter(|c| !c.is_control()).take(28).collect();
+                                ui.label(RichText::new(label).small().weak())
+                                    .on_hover_text(directory.display().to_string());
+                            }
                             ui.label(
                                 RichText::new(format!("{} × {}", size.columns, size.rows))
                                     .small()
@@ -906,7 +952,7 @@ impl eframe::App for Whostty {
                 let Some(tab) = self.tabs.get_mut(self.active) else {
                     ui.centered_and_justified(|ui| {
                         if ui.button("Open a terminal · Ctrl+Shift+T").clicked() {
-                            new_profile = Some(self.settings.default_profile);
+                            new_profile = Some((self.settings.default_profile, true));
                         }
                     });
                     return;
@@ -1046,8 +1092,12 @@ impl eframe::App for Whostty {
                 self.restart_pane(ctx);
             }
         }
-        if let Some(index) = new_profile {
-            self.open_profile(index, ctx);
+        if let Some((index, inherit)) = new_profile {
+            if inherit {
+                self.new_tab(ctx);
+            } else {
+                self.open_profile(index, ctx);
+            }
         }
         if !blocked {
             self.keyboard(ctx, &events, focused);
@@ -1256,6 +1306,110 @@ mod tests {
             std::thread::sleep(Duration::from_millis(20));
         }
         assert!(app.composition.is_empty());
+    }
+
+    #[test]
+    fn tabs_and_splits_inherit_only_a_compatible_local_directory() {
+        let temp = tempfile::tempdir().unwrap();
+        let directory = temp.path().to_owned();
+        let target = directory.join("한글 space;%");
+        std::fs::create_dir(&target).unwrap();
+        #[cfg(windows)]
+        let profile = Profile::new(
+            "cwd",
+            "powershell.exe",
+            &[
+                "-NoLogo",
+                "-NoProfile",
+                "-Command",
+                "[Console]::WriteLine('cwd=' + (Get-Location).ProviderPath); [Console]::ReadLine()",
+            ],
+        );
+        #[cfg(not(windows))]
+        let profile = Profile::new(
+            "cwd",
+            "/bin/sh",
+            &["-c", "printf 'cwd=%s\\n' \"$PWD\"; read value"],
+        );
+        let ctx = egui::Context::default();
+        let mut app = Whostty {
+            settings: Settings {
+                profiles: vec![profile],
+                ..Settings::default()
+            },
+            config_path: PathBuf::new(),
+            config_error: false,
+            tabs: Vec::new(),
+            active: 0,
+            focus_terminal: true,
+            composition: String::new(),
+            show_settings: false,
+            message: None,
+            close: None,
+            allow_close: false,
+            next_pane: 1,
+            search_open: false,
+            search_focus: false,
+            reported_focus: None,
+        };
+        app.open_profile(0, &ctx);
+        let uri = url::Url::from_directory_path(&target).unwrap();
+        app.pane()
+            .unwrap()
+            .session
+            .as_ref()
+            .unwrap()
+            .terminal
+            .lock()
+            .unwrap()
+            .feed(format!("\x1b]7;{uri}\x07").as_bytes());
+        app.new_tab(&ctx);
+        let inherited = app.pane().unwrap().session.as_ref().unwrap();
+        let deadline = Instant::now() + Duration::from_secs(15);
+        while !inherited
+            .terminal
+            .lock()
+            .unwrap()
+            .text()
+            .contains("space;%")
+        {
+            assert!(
+                Instant::now() < deadline,
+                "New shell did not start in inherited directory"
+            );
+            std::thread::sleep(Duration::from_millis(20));
+        }
+        assert_eq!(inherited.working_directory(), Some(target.clone()));
+        app.split(Axis::Columns, &ctx);
+        assert_eq!(
+            app.pane()
+                .unwrap()
+                .session
+                .as_ref()
+                .unwrap()
+                .working_directory(),
+            Some(target.clone())
+        );
+        app.settings.inherit_working_directory = false;
+        let mut candidate = app.settings.profiles[0].clone();
+        app.inherit_directory(&mut candidate);
+        assert!(candidate.working_directory.is_none());
+        app.settings.inherit_working_directory = true;
+        candidate.args.push("different-environment".into());
+        app.inherit_directory(&mut candidate);
+        assert!(candidate.working_directory.is_none());
+        app.settings.profiles[0].working_directory = Some(directory.clone());
+        app.new_tab(&ctx);
+        assert_eq!(
+            app.pane()
+                .unwrap()
+                .session
+                .as_ref()
+                .unwrap()
+                .working_directory(),
+            Some(directory.clone())
+        );
+        drop(app);
     }
 
     #[test]
