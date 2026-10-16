@@ -15,6 +15,7 @@ GitHub Actions의 **Windows package** 워크플로에서 main의 성공한 실�
 `whostty-windows-x64` 아티팩트를 다운로드한다. 아티팩트 안의 `whostty-windows-x64.zip`을 다시 풀고
 `whostty.exe`를 실행한다. ZIP에는 Whostty MIT 라이선스와 의존성 라이선스 고지가 동봉된다.
 코드 서명과 자동 업데이트는 아직 없다. 대상은 Windows x64이며 ARM64 패키지는 만들지 않는다.
+아티팩트 보존 기간은 14일이다. 만료되면 워크플로의 Run workflow로 main에서 새로 빌드한다.
 
 GitHub CLI를 사용하는 경우:
 

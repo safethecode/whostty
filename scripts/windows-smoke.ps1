@@ -1,4 +1,4 @@
-$ErrorActionPreference = 'Stop'
+﻿$ErrorActionPreference = 'Stop'
 $Escape = [char]27
 Write-Host 'Whostty Windows manual smoke test'
 Write-Host ('Window: {0} columns x {1} rows' -f [Console]::WindowWidth, [Console]::WindowHeight)
