@@ -960,6 +960,11 @@ impl eframe::App for Whostty {
                             if let Some(error) = result.error {
                                 pane.error = Some(error);
                             }
+                            if !blocked {
+                                if let Some(url) = result.open_url {
+                                    ctx.open_url(egui::OpenUrl::new_tab(url));
+                                }
+                            }
                             if !blocked && pane.exit.is_none() {
                                 for bytes in result.input {
                                     if let Err(error) = session.write(bytes) {
