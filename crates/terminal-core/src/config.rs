@@ -15,6 +15,7 @@ pub struct Settings {
     pub font_italic_path: Option<PathBuf>,
     pub font_bold_italic_path: Option<PathBuf>,
     pub theme: crate::theme::Theme,
+    pub keybindings: Vec<crate::shortcuts::Binding>,
     pub profiles: Vec<Profile>,
 }
 
@@ -55,6 +56,7 @@ impl Default for Settings {
             font_italic_path: None,
             font_bold_italic_path: None,
             theme: Default::default(),
+            keybindings: Vec::new(),
             profiles,
         }
     }
@@ -122,6 +124,7 @@ impl Settings {
     }
 
     pub fn validate(&self) -> Result<()> {
+        crate::shortcuts::Shortcuts::new(&self.keybindings)?;
         if !self.font_size.is_finite() || !(8.0..=40.0).contains(&self.font_size) {
             bail!("font_size must be between 8 and 40");
         }

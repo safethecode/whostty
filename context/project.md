@@ -132,3 +132,13 @@ Mac 실제 실행 결과: Apple M3 Pro/Metal, 1600×1000 readback, probe 색상 
 기존 설정은 shell_integration=false를 유지하며 opt-in할 수 있다. 직접 명령 실행은 연동을 끈다. WSL/SSH 경로 변환은 후속 작업이다.
 
 Mac 실제 창에서도 `/tmp`로 이동해 OSC 7 보고 후 `+`로 만든 탭의 `pwd`가 `/private/tmp`인 것을 확인했다. 상태 표시줄도 tmp로 갱신됐다.
+
+PR #15는 Windows 네이티브 실행 검증이 찾아낸 DirectX 12 백엔드 누락을 수정한 뒤 병합했다.
+최종 ZIP의 진단 결과는 Windows x64 / Microsoft Basic Render Driver / Dx12 / Cpu, 800×500 화면에서 probe 1041픽셀,
+PTY·renderer 성공(2125ms)이었다. 소프트웨어 어댑터 검증이며 실기기 GPU 성능 비교가 아니다.
+
+키 바인딩은 `[[keybindings]]`의 key/action으로 기본 조합을 덮어쓰거나 unbind한다. 중복·알 수 없는 조합은 설정 오류로 처리한다.
+modifier를 정확하게 비교하며, IME 조합 중에는 단축키를 가로채지 않는다. 새 탭·닫기·분할·붙여넣기는 키 반복을 무시한다.
+단축키 뒤의 같은 이벤트 묶음에 든 Text가 셸로 새지 않는 것을 실제 PTY 테스트로 확인한다.
+
+Mac 네이티브 앱에서 설정한 F6로 새 탭을 만들고, 실행 중 F7로 바꿔 Reload config를 누른 뒤 목록과 실제 새 탭 동작이 F7로 바뀌는 것을 확인했다.

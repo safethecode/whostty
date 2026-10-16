@@ -15,6 +15,7 @@ use whostty_core::{
     config::{Profile, Settings},
     input::{self, Key, Modifiers},
     session::{ExitState, Session, SessionEvent},
+    shortcuts::{Action, Shortcuts},
     terminal::Size,
 };
 
@@ -28,6 +29,7 @@ enum Close {
 
 pub struct Whostty {
     settings: Settings,
+    shortcuts: Shortcuts,
     config_path: PathBuf,
     config_error: bool,
     tabs: Vec<Tab>,
@@ -67,8 +69,10 @@ impl Whostty {
             .map_err(std::io::Error::other)?;
         configure_style(&cc.egui_ctx);
         let font_error = configure_fonts(&cc.egui_ctx, &settings);
+        let shortcuts = Shortcuts::new(&settings.keybindings).map_err(std::io::Error::other)?;
         let mut app = Self {
             settings,
+            shortcuts,
             config_path,
             config_error,
             tabs: Vec::new(),
@@ -265,6 +269,8 @@ impl Whostty {
         let mut action = None;
         let mut close = false;
         let focus = std::mem::take(&mut self.search_focus);
+        let previous = format!("Previous · {}", self.shortcuts.label(Action::FindPrevious));
+        let next = format!("Next · {}", self.shortcuts.label(Action::FindNext));
         egui::TopBottomPanel::top("find-bar")
             .exact_height(38.0)
             .show(ctx, |ui| {
@@ -296,14 +302,10 @@ impl Whostty {
                         action = Some((ui.input(|i| i.modifiers.shift), false));
                         edit.request_focus();
                     }
-                    if ui
-                        .button("<")
-                        .on_hover_text("Previous · Shift+F3")
-                        .clicked()
-                    {
+                    if ui.button("<").on_hover_text(&previous).clicked() {
                         action = Some((true, false));
                     }
-                    if ui.button(">").on_hover_text("Next · F3").clicked() {
+                    if ui.button(">").on_hover_text(&next).clicked() {
                         action = Some((false, false));
                     }
                     if ui
@@ -530,99 +532,137 @@ impl Whostty {
         }
     }
 
+    fn shortcut(&mut self, action: Action, ctx: &egui::Context, focused: bool) -> bool {
+        if action.terminal_only() && (!focused || self.search_open) {
+            return false;
+        }
+        match action {
+            Action::NewTab => self.new_tab(ctx),
+            Action::ClosePane => {
+                if let Some(tab) = self.tabs.get(self.active) {
+                    self.request_close_pane(self.active, tab.active);
+                }
+            }
+            Action::SplitRight => self.split(Axis::Columns, ctx),
+            Action::SplitDown => self.split(Axis::Rows, ctx),
+            Action::FocusLeft => self.focus_neighbor(Direction::Left),
+            Action::FocusRight => self.focus_neighbor(Direction::Right),
+            Action::FocusUp => self.focus_neighbor(Direction::Up),
+            Action::FocusDown => self.focus_neighbor(Direction::Down),
+            Action::NextTab | Action::PreviousTab => {
+                if !self.tabs.is_empty() {
+                    let count = self.tabs.len();
+                    self.active = (self.active
+                        + if action == Action::PreviousTab {
+                            count - 1
+                        } else {
+                            1
+                        })
+                        % count;
+                    self.focus_terminal = true;
+                    self.composition.clear();
+                }
+            }
+            Action::Find => {
+                self.search_open = true;
+                self.search_focus = true;
+                self.focus_terminal = false;
+                ctx.request_repaint();
+            }
+            Action::FindNext | Action::FindPrevious => {
+                if !self.search_open {
+                    return false;
+                }
+                self.find(ctx, action == Action::FindPrevious, false);
+            }
+            Action::Preferences => self.show_settings = true,
+            Action::IncreaseFont => {
+                self.settings.font_size = (self.settings.font_size + 1.0).min(40.0)
+            }
+            Action::DecreaseFont => {
+                self.settings.font_size = (self.settings.font_size - 1.0).max(8.0)
+            }
+            Action::ResetFont => self.settings.font_size = 15.0,
+            Action::Copy => {
+                self.copy(ctx);
+            }
+            Action::Paste => ctx.send_viewport_cmd(egui::ViewportCommand::RequestPaste),
+            Action::ScrollPageUp
+            | Action::ScrollPageDown
+            | Action::ScrollTop
+            | Action::ScrollBottom => {
+                if let Some(session) = self.pane().and_then(|pane| pane.session.as_ref()) {
+                    session
+                        .terminal
+                        .lock()
+                        .unwrap_or_else(|e| e.into_inner())
+                        .term
+                        .scroll_display(match action {
+                            Action::ScrollPageUp => Scroll::PageUp,
+                            Action::ScrollPageDown => Scroll::PageDown,
+                            Action::ScrollTop => Scroll::Top,
+                            _ => Scroll::Bottom,
+                        });
+                }
+            }
+            Action::Unbind => return false,
+        }
+        true
+    }
+
     fn keyboard(&mut self, ctx: &egui::Context, events: &[egui::Event], focused: bool) {
         let mut text_modifiers = None;
+        let mut suppress_text = false;
         for event in events {
+            if self.close.is_some() || self.show_settings {
+                continue;
+            }
             if let egui::Event::Key {
                 key,
-                pressed: true,
+                pressed,
+                repeat,
                 modifiers,
                 ..
             } = event
             {
-                text_modifiers = Some(*modifiers);
-                if modifiers.ctrl && *key == egui::Key::F {
-                    self.search_open = true;
-                    self.search_focus = true;
-                    self.focus_terminal = false;
-                    ctx.request_repaint();
-                    continue;
-                }
-                if self.search_open && *key == egui::Key::Escape {
-                    self.close_search();
-                    continue;
-                }
-                if self.search_open && *key == egui::Key::F3 {
-                    self.find(ctx, modifiers.shift, false);
-                    continue;
-                }
-                if modifiers.ctrl && modifiers.shift && *key == egui::Key::T {
-                    self.new_tab(ctx);
-                    continue;
-                }
-                if modifiers.ctrl && modifiers.shift && *key == egui::Key::W {
-                    if !self.tabs.is_empty() {
-                        self.request_close_pane(self.active, self.tabs[self.active].active);
+                suppress_text = false;
+                if *pressed {
+                    text_modifiers = Some(*modifiers);
+                    if self.composition.is_empty() && !modifiers.mac_cmd {
+                        if self.search_open
+                            && *key == egui::Key::Escape
+                            && *modifiers == egui::Modifiers::NONE
+                        {
+                            self.close_search();
+                            continue;
+                        }
+                        if let Some(action) = self.shortcuts.action(
+                            key.name(),
+                            modifiers.ctrl,
+                            modifiers.alt,
+                            modifiers.shift,
+                        ) {
+                            if (*repeat && !action.repeatable())
+                                || self.shortcut(action, ctx, focused)
+                            {
+                                suppress_text = true;
+                                text_modifiers = None;
+                                continue;
+                            }
+                        }
                     }
-                    continue;
-                }
-                if modifiers.ctrl && modifiers.shift && matches!(key, egui::Key::D | egui::Key::E) {
-                    self.split(
-                        if *key == egui::Key::D {
-                            Axis::Columns
-                        } else {
-                            Axis::Rows
-                        },
-                        ctx,
-                    );
-                    continue;
-                }
-                if modifiers.ctrl && modifiers.alt {
-                    let direction = match key {
-                        egui::Key::ArrowLeft => Some(Direction::Left),
-                        egui::Key::ArrowRight => Some(Direction::Right),
-                        egui::Key::ArrowUp => Some(Direction::Up),
-                        egui::Key::ArrowDown => Some(Direction::Down),
-                        _ => None,
-                    };
-                    if let Some(direction) = direction {
-                        self.focus_neighbor(direction);
-                        continue;
-                    }
-                }
-                if modifiers.ctrl && *key == egui::Key::Tab && !self.tabs.is_empty() {
-                    let count = self.tabs.len();
-                    self.active =
-                        (self.active + if modifiers.shift { count - 1 } else { 1 }) % count;
-                    self.focus_terminal = true;
-                    self.composition.clear();
-                    continue;
-                }
-                if modifiers.ctrl && *key == egui::Key::Comma {
-                    self.show_settings = true;
-                    continue;
-                }
-                if modifiers.ctrl
-                    && matches!(
-                        key,
-                        egui::Key::Plus | egui::Key::Equals | egui::Key::Minus | egui::Key::Num0
-                    )
-                {
-                    self.settings.font_size = match key {
-                        egui::Key::Minus => (self.settings.font_size - 1.0).max(8.0),
-                        egui::Key::Num0 => 15.0,
-                        _ => (self.settings.font_size + 1.0).min(40.0),
-                    };
-                    continue;
                 }
             }
-            if !focused || self.close.is_some() || self.show_settings {
+            if !focused || self.search_open {
                 continue;
             }
             match event {
                 egui::Event::Text(text) => {
-                    // The backend already filters command text. Its committed text event is
-                    // authoritative, even when the frame ends with different modifier keys.
+                    if suppress_text {
+                        suppress_text = false;
+                        continue;
+                    }
+                    // Committed backend text remains authoritative for IME and AltGr.
                     let mut bytes = text.as_bytes().to_vec();
                     if text_modifiers
                         .take()
@@ -657,25 +697,6 @@ impl Whostty {
                     ..
                 } => {
                     if !self.composition.is_empty() {
-                        continue;
-                    }
-                    if modifiers.ctrl && modifiers.shift && *key == egui::Key::C {
-                        self.copy(ctx);
-                        continue;
-                    }
-                    if modifiers.shift && matches!(key, egui::Key::PageUp | egui::Key::PageDown) {
-                        if let Some(session) = self.pane().and_then(|tab| tab.session.as_ref()) {
-                            session
-                                .terminal
-                                .lock()
-                                .unwrap_or_else(|e| e.into_inner())
-                                .term
-                                .scroll_display(if *key == egui::Key::PageUp {
-                                    Scroll::PageUp
-                                } else {
-                                    Scroll::PageDown
-                                });
-                        }
                         continue;
                     }
                     if modifiers.ctrl && modifiers.alt && key.name().len() == 1 {
@@ -732,7 +753,7 @@ impl Whostty {
                 }
                 if ui.button("Reload config").clicked() {
                     match Settings::load(&self.config_path) {
-                        Ok(settings) => { self.message = configure_fonts(ctx, &settings); self.settings = settings; self.config_error = false; }
+                        Ok(settings) => { self.message = configure_fonts(ctx, &settings); self.shortcuts = Shortcuts::new(&settings.keybindings).expect("Settings validates bindings"); self.settings = settings; self.config_error = false; }
                         Err(error) => { self.message = Some(format!("Reload configuration: {error:#}")); self.config_error = true; }
                     }
                 }
@@ -742,7 +763,30 @@ impl Whostty {
             });
             if self.config_error { ui.colored_label(Color32::LIGHT_RED, "Fix and reload the config before saving preferences."); }
             ui.add_space(12.0);
-            ui.label(RichText::new("Ctrl+Shift+T  New tab\nCtrl+Tab  Switch tab\nCtrl+Shift+D / E  Split right / down\nCtrl+Alt+arrows  Focus pane\nCtrl+Shift+W  Close pane\nCtrl+F  Search active pane\nF3 / Shift+F3  Next / previous match\nCtrl+Shift+C / V  Copy / paste\nCtrl+plus / minus / 0  Text size\nShift+PageUp / PageDown  Scroll history\nShift+drag  Select while a TUI uses the mouse").small());
+            ui.collapsing("Keyboard shortcuts", |ui| {
+                egui::ScrollArea::vertical().max_height(240.0).show(ui, |ui| {
+                    egui::Grid::new("shortcut-list").show(ui, |ui| {
+                        for (action, label) in [
+                            (Action::NewTab,"New tab"), (Action::ClosePane,"Close pane"),
+                            (Action::SplitRight,"Split right"), (Action::SplitDown,"Split down"),
+                            (Action::FocusLeft,"Focus left"), (Action::FocusRight,"Focus right"),
+                            (Action::FocusUp,"Focus up"), (Action::FocusDown,"Focus down"),
+                            (Action::NextTab,"Next tab"), (Action::PreviousTab,"Previous tab"),
+                            (Action::Find,"Find"), (Action::FindNext,"Next match"), (Action::FindPrevious,"Previous match"),
+                            (Action::Copy,"Copy"), (Action::Paste,"Paste"),
+                            (Action::IncreaseFont,"Larger text"), (Action::DecreaseFont,"Smaller text"), (Action::ResetFont,"Reset text size"),
+                            (Action::ScrollPageUp,"Scroll page up"), (Action::ScrollPageDown,"Scroll page down"),
+                        ] {
+                            ui.label(label);
+                            let binding = self.shortcuts.label(action);
+                            ui.label(if action == Action::Paste && binding == "Unbound" { "Ctrl+V / Ctrl+Shift+V".into() } else { binding });
+                            ui.end_row();
+                        }
+                    });
+                });
+                ui.label("Ctrl+V / Ctrl+Shift+V: system paste. Shift+drag: select in mouse-aware apps.");
+                ui.label("Edit keybindings in the config file, then reload to apply them.");
+            });
         });
         if self.show_settings && !open {
             self.focus_terminal = true;
@@ -816,7 +860,10 @@ impl eframe::App for Whostty {
                         });
                     if ui
                         .button("+")
-                        .on_hover_text("New tab · Ctrl+Shift+T")
+                        .on_hover_text(format!(
+                            "New tab · {}",
+                            self.shortcuts.label(Action::NewTab)
+                        ))
                         .clicked()
                     {
                         new_profile = Some((self.settings.default_profile, true));
@@ -832,7 +879,10 @@ impl eframe::App for Whostty {
                         if ui
                             .add_enabled(
                                 !self.tabs.is_empty(),
-                                egui::Button::new("Split right  Ctrl+Shift+D"),
+                                egui::Button::new(format!(
+                                    "Split right  {}",
+                                    self.shortcuts.label(Action::SplitRight)
+                                )),
                             )
                             .clicked()
                         {
@@ -842,7 +892,10 @@ impl eframe::App for Whostty {
                         if ui
                             .add_enabled(
                                 !self.tabs.is_empty(),
-                                egui::Button::new("Split down  Ctrl+Shift+E"),
+                                egui::Button::new(format!(
+                                    "Split down  {}",
+                                    self.shortcuts.label(Action::SplitDown)
+                                )),
                             )
                             .clicked()
                         {
@@ -852,7 +905,10 @@ impl eframe::App for Whostty {
                     });
                     if ui
                         .button("...")
-                        .on_hover_text("Preferences · Ctrl+comma")
+                        .on_hover_text(format!(
+                            "Preferences · {}",
+                            self.shortcuts.label(Action::Preferences)
+                        ))
                         .clicked()
                     {
                         self.show_settings = true;
@@ -951,7 +1007,13 @@ impl eframe::App for Whostty {
             .show(ctx, |ui| {
                 let Some(tab) = self.tabs.get_mut(self.active) else {
                     ui.centered_and_justified(|ui| {
-                        if ui.button("Open a terminal · Ctrl+Shift+T").clicked() {
+                        if ui
+                            .button(format!(
+                                "Open a terminal · {}",
+                                self.shortcuts.label(Action::NewTab)
+                            ))
+                            .clicked()
+                        {
                             new_profile = Some((self.settings.default_profile, true));
                         }
                     });
@@ -1227,6 +1289,27 @@ mod tests {
     use super::*;
     use std::time::{Duration, Instant};
 
+    fn test_app(settings: Settings) -> Whostty {
+        Whostty {
+            shortcuts: Shortcuts::new(&settings.keybindings).unwrap(),
+            settings,
+            config_path: PathBuf::new(),
+            config_error: false,
+            tabs: Vec::new(),
+            active: 0,
+            focus_terminal: true,
+            composition: String::new(),
+            show_settings: false,
+            message: None,
+            close: None,
+            allow_close: false,
+            next_pane: 1,
+            search_open: false,
+            search_focus: false,
+            reported_focus: None,
+        }
+    }
+
     #[test]
     fn keyboard_ignores_unfocused_text_and_ime_enter_before_commit() {
         #[cfg(windows)]
@@ -1247,26 +1330,10 @@ mod tests {
             &["-c", "read value; printf received-%s \"$value\""],
         );
         let ctx = egui::Context::default();
-        let mut app = Whostty {
-            settings: Settings {
-                profiles: vec![profile],
-                ..Settings::default()
-            },
-            config_path: PathBuf::new(),
-            config_error: false,
-            tabs: Vec::new(),
-            active: 0,
-            focus_terminal: true,
-            composition: String::new(),
-            show_settings: false,
-            message: None,
-            close: None,
-            allow_close: false,
-            next_pane: 1,
-            search_open: false,
-            search_focus: false,
-            reported_focus: None,
-        };
+        let mut app = test_app(Settings {
+            profiles: vec![profile],
+            ..Settings::default()
+        });
         app.open_profile(0, &ctx);
         let enter = egui::Event::Key {
             key: egui::Key::Enter,
@@ -1309,6 +1376,142 @@ mod tests {
     }
 
     #[test]
+    fn custom_shortcuts_consume_text_and_respect_ime_modifiers_and_repeat() {
+        use whostty_core::shortcuts::Binding;
+        #[cfg(windows)]
+        let profile = Profile::new(
+            "keys",
+            "powershell.exe",
+            &[
+                "-NoLogo",
+                "-NoProfile",
+                "-Command",
+                "$v = [Console]::ReadLine(); [Console]::Write('received-' + $v)",
+            ],
+        );
+        #[cfg(not(windows))]
+        let profile = Profile::new(
+            "keys",
+            "/bin/sh",
+            &["-c", "read value; printf received-%s \"$value\""],
+        );
+        let ctx = egui::Context::default();
+        let mut app = test_app(Settings {
+            profiles: vec![profile],
+            keybindings: vec![
+                Binding {
+                    key: "Ctrl+Shift+T".into(),
+                    action: Action::Unbind,
+                },
+                Binding {
+                    key: "Alt+I".into(),
+                    action: Action::IncreaseFont,
+                },
+                Binding {
+                    key: "Ctrl+Shift+N".into(),
+                    action: Action::NewTab,
+                },
+                Binding {
+                    key: "F4".into(),
+                    action: Action::Paste,
+                },
+            ],
+            ..Settings::default()
+        });
+        let event = |key, modifiers, repeat| egui::Event::Key {
+            key,
+            physical_key: None,
+            pressed: true,
+            repeat,
+            modifiers,
+        };
+        app.open_profile(0, &ctx);
+        app.keyboard(
+            &ctx,
+            &[event(
+                egui::Key::F,
+                egui::Modifiers::CTRL | egui::Modifiers::ALT,
+                false,
+            )],
+            true,
+        );
+        assert!(!app.search_open, "Extra Alt must not invoke Ctrl+F");
+        app.keyboard(
+            &ctx,
+            &[
+                event(egui::Key::I, egui::Modifiers::ALT, false),
+                egui::Event::Text("i".into()),
+                event(egui::Key::K, egui::Modifiers::NONE, false),
+                egui::Event::Text("kept".into()),
+                event(egui::Key::Enter, egui::Modifiers::NONE, false),
+            ],
+            true,
+        );
+        assert_eq!(app.settings.font_size, 16.0);
+        let deadline = Instant::now() + Duration::from_secs(15);
+        while !app
+            .pane()
+            .unwrap()
+            .session
+            .as_ref()
+            .unwrap()
+            .terminal
+            .lock()
+            .unwrap()
+            .text()
+            .contains("received-kept")
+        {
+            assert!(
+                Instant::now() < deadline,
+                "Shortcut text leaked into the PTY"
+            );
+            std::thread::sleep(Duration::from_millis(20));
+        }
+        let new_tab = event(
+            egui::Key::N,
+            egui::Modifiers::CTRL | egui::Modifiers::SHIFT,
+            false,
+        );
+        app.composition = "조합".into();
+        app.keyboard(&ctx, &[new_tab.clone()], true);
+        assert_eq!(app.tabs.len(), 1);
+        app.composition.clear();
+        app.keyboard(
+            &ctx,
+            &[event(
+                egui::Key::N,
+                egui::Modifiers::CTRL | egui::Modifiers::SHIFT,
+                true,
+            )],
+            true,
+        );
+        assert_eq!(app.tabs.len(), 1);
+        app.keyboard(&ctx, &[new_tab], true);
+        assert_eq!(app.tabs.len(), 2);
+        app.keyboard(
+            &ctx,
+            &[event(
+                egui::Key::T,
+                egui::Modifiers::CTRL | egui::Modifiers::SHIFT,
+                false,
+            )],
+            true,
+        );
+        assert_eq!(app.tabs.len(), 2, "Unbound default must reach the terminal");
+        let output = ctx.run(egui::RawInput::default(), |ctx| {
+            app.keyboard(
+                ctx,
+                &[event(egui::Key::F4, egui::Modifiers::NONE, false)],
+                true,
+            );
+        });
+        assert!(output.viewport_output[&egui::ViewportId::ROOT]
+            .commands
+            .iter()
+            .any(|command| matches!(command, egui::ViewportCommand::RequestPaste)));
+    }
+
+    #[test]
     fn tabs_and_splits_inherit_only_a_compatible_local_directory() {
         let temp = tempfile::tempdir().unwrap();
         let directory = temp.path().to_owned();
@@ -1332,26 +1535,10 @@ mod tests {
             &["-c", "printf 'cwd=%s\\n' \"$PWD\"; read value"],
         );
         let ctx = egui::Context::default();
-        let mut app = Whostty {
-            settings: Settings {
-                profiles: vec![profile],
-                ..Settings::default()
-            },
-            config_path: PathBuf::new(),
-            config_error: false,
-            tabs: Vec::new(),
-            active: 0,
-            focus_terminal: true,
-            composition: String::new(),
-            show_settings: false,
-            message: None,
-            close: None,
-            allow_close: false,
-            next_pane: 1,
-            search_open: false,
-            search_focus: false,
-            reported_focus: None,
-        };
+        let mut app = test_app(Settings {
+            profiles: vec![profile],
+            ..Settings::default()
+        });
         app.open_profile(0, &ctx);
         let uri = url::Url::from_directory_path(&target).unwrap();
         app.pane()
@@ -1432,23 +1619,7 @@ mod tests {
             &["-c", "read value; printf received-%s \"$value\""],
         );
         let ctx = egui::Context::default();
-        let mut app = Whostty {
-            settings: Settings::default(),
-            config_path: PathBuf::new(),
-            config_error: false,
-            tabs: Vec::new(),
-            active: 0,
-            focus_terminal: true,
-            composition: String::new(),
-            show_settings: false,
-            message: None,
-            close: None,
-            allow_close: false,
-            next_pane: 1,
-            search_open: false,
-            search_focus: false,
-            reported_focus: None,
-        };
+        let mut app = test_app(Settings::default());
         app.open(profile, &ctx);
         let first = app.tabs[0].active;
         app.split(Axis::Columns, &ctx);
