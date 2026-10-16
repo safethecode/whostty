@@ -2,7 +2,9 @@
 
 mod app;
 mod icon;
+mod layout;
 mod view;
+mod workspace;
 
 fn main() {
     if let Err(error) = run() {
