@@ -11,7 +11,7 @@ use whostty_core::{
             color::Colors,
             viewport_to_point, RenderableCursor, Term, TermMode,
         },
-        vte::ansi::{Color, CursorShape, NamedColor, Rgb},
+        vte::ansi::{CursorShape, NamedColor, Rgb},
     },
     session::Session,
     terminal::Size,
@@ -62,15 +62,27 @@ pub struct View {
     pub open_url: Option<String>,
 }
 
+pub struct Options<'a> {
+    pub font_size: f32,
+    pub composition: &'a str,
+    pub focus: bool,
+    pub theme: &'a whostty_core::theme::Palette,
+    pub search: Option<&'a whostty_core::search::Search>,
+}
+
 pub fn show(
     ui: &mut egui::Ui,
     session: &mut Session,
-    font_size: f32,
-    composition: &str,
-    focus: bool,
     state: &mut ViewState,
-    search: Option<&whostty_core::search::Search>,
+    options: Options<'_>,
 ) -> View {
+    let Options {
+        font_size,
+        composition,
+        focus,
+        theme,
+        search,
+    } = options;
     let (rect, response) = ui.allocate_exact_size(ui.available_size(), Sense::click_and_drag());
     let response = response.on_hover_cursor(egui::CursorIcon::Text);
     if focus || response.clicked() || response.drag_started() {
@@ -335,7 +347,6 @@ pub fn show(
     }
 
     let painter = ui.painter_at(rect);
-    painter.rect_filled(rect, 0.0, BACKGROUND);
     let Snapshot {
         cursor,
         offset,
@@ -345,6 +356,10 @@ pub fn show(
     } = capture(term, state);
     // Text layout and GPU shape construction must not hold up PTY parsing.
     drop(terminal);
+    let background = color(theme.indexed(NamedColor::Background as usize, &colors));
+    let foreground = color(theme.indexed(NamedColor::Foreground as usize, &colors));
+    let accent = color(theme.indexed(NamedColor::Cursor as usize, &colors));
+    painter.rect_filled(rect, 0.0, background);
     crate::accessibility::update(
         ui.ctx(),
         response.id,
@@ -384,14 +399,14 @@ pub fn show(
             continue;
         }
         let pos = rect.min + Vec2::new(indexed.point.column.0 as f32 * cell.x, row as f32 * cell.y);
-        let mut bg = resolve_color(
+        let mut bg = color(theme.resolve(
             if indexed.flags.contains(Flags::INVERSE) {
                 indexed.fg
             } else {
                 indexed.bg
             },
             &colors,
-        );
+        ));
         if search_match.is_some_and(|range| {
             range.contains(&indexed.point)
                 || (indexed.flags.contains(Flags::WIDE_CHAR_SPACER)
@@ -401,10 +416,10 @@ pub fn show(
                         Column(indexed.point.column.0 - 1),
                     )))
         }) {
-            bg = Color32::from_rgb(103, 78, 35);
+            bg = color(theme.search);
         }
         if selection.is_some_and(|range| range.contains(indexed.point)) {
-            bg = Color32::from_rgb(51, 77, 70);
+            bg = color(theme.selection);
         }
         if offset == 0
             && cursor_covers(indexed.point)
@@ -412,9 +427,9 @@ pub fn show(
             && focused
             && cursor.shape == CursorShape::Block
         {
-            bg = ACCENT;
+            bg = accent;
         }
-        if bg != BACKGROUND {
+        if bg != background {
             painter.rect_filled(Rect::from_min_size(pos, cell), 0.0, bg);
         }
     }
@@ -426,21 +441,21 @@ pub fn show(
         let pos = rect.min + Vec2::new(indexed.point.column.0 as f32 * cell.x, row as f32 * cell.y);
         let cell_rect = Rect::from_min_size(pos, cell);
         let flags = indexed.flags;
-        let mut fg = resolve_color(
+        let mut fg = color(theme.resolve(
             if flags.contains(Flags::INVERSE) {
                 indexed.bg
             } else {
                 indexed.fg
             },
             &colors,
-        );
+        ));
         if flags.contains(Flags::DIM) {
             fg = fg.gamma_multiply(0.6);
         }
         let cursor_cell =
             offset == 0 && cursor_covers(indexed.point) && mode.contains(TermMode::SHOW_CURSOR);
         if cursor_cell && focused && cursor.shape == CursorShape::Block {
-            fg = BACKGROUND;
+            fg = background;
         }
         if !flags
             .intersects(Flags::WIDE_CHAR_SPACER | Flags::LEADING_WIDE_CHAR_SPACER | Flags::HIDDEN)
@@ -469,7 +484,7 @@ pub fn show(
         if !flags.contains(Flags::HIDDEN) {
             let underline = indexed
                 .underline_color()
-                .map(|color| resolve_color(color, &colors))
+                .map(|underline| color(theme.resolve(underline, &colors)))
                 .unwrap_or(fg);
             paint_underline(&painter, cell_rect, flags, underline);
             if hovered_link
@@ -481,7 +496,7 @@ pub fn show(
                         cell_rect.left_bottom() - Vec2::new(0.0, 1.0),
                         cell_rect.right_bottom() - Vec2::new(0.0, 1.0),
                     ],
-                    Stroke::new(1.0, ACCENT),
+                    Stroke::new(1.0, accent),
                 );
             }
         }
@@ -509,18 +524,18 @@ pub fn show(
             painter.rect_stroke(
                 cursor_rect,
                 0.0,
-                Stroke::new(1.0, ACCENT),
+                Stroke::new(1.0, accent),
                 egui::StrokeKind::Inside,
             );
         } else if cursor.shape == CursorShape::Beam {
             painter.line_segment(
                 [cursor_rect.left_top(), cursor_rect.left_bottom()],
-                Stroke::new(2.0, ACCENT),
+                Stroke::new(2.0, accent),
             );
         } else if cursor.shape == CursorShape::Underline {
             painter.line_segment(
                 [cursor_rect.left_bottom(), cursor_rect.right_bottom()],
-                Stroke::new(2.0, ACCENT),
+                Stroke::new(2.0, accent),
             );
         }
     }
@@ -529,9 +544,9 @@ pub fn show(
             .output_mut(|output| output.ime = Some(egui::output::IMEOutput { rect, cursor_rect }));
         if !composition.is_empty() {
             let pos = cursor_rect.min;
-            let galley = painter.layout_no_wrap(composition.into(), font, FOREGROUND);
-            painter.rect_filled(Rect::from_min_size(pos, galley.size()), 0.0, BACKGROUND);
-            painter.galley(pos, galley, FOREGROUND);
+            let galley = painter.layout_no_wrap(composition.into(), font, foreground);
+            painter.rect_filled(Rect::from_min_size(pos, galley.size()), 0.0, background);
+            painter.galley(pos, galley, foreground);
         }
     }
 
@@ -604,67 +619,9 @@ fn paint_underline(painter: &egui::Painter, rect: Rect, flags: Flags, color: Col
     }
 }
 
-pub fn resolve_color(color: Color, overrides: &Colors) -> Color32 {
-    match color {
-        Color::Spec(rgb) => Color32::from_rgb(rgb.r, rgb.g, rgb.b),
-        Color::Named(named) => palette(named as usize, overrides),
-        Color::Indexed(index) => palette(index as usize, overrides),
-    }
-}
-
-pub fn palette(index: usize, overrides: &Colors) -> Color32 {
-    if let Some(rgb) = overrides[index] {
-        return Color32::from_rgb(rgb.r, rgb.g, rgb.b);
-    }
-    const ANSI: [[u8; 3]; 16] = [
-        [35, 40, 48],
-        [232, 122, 130],
-        [151, 219, 174],
-        [231, 199, 133],
-        [133, 178, 231],
-        [189, 160, 225],
-        [128, 206, 211],
-        [219, 224, 231],
-        [104, 116, 131],
-        [247, 148, 154],
-        [176, 234, 192],
-        [246, 217, 159],
-        [163, 199, 244],
-        [209, 184, 241],
-        [158, 226, 230],
-        [247, 249, 252],
-    ];
-    match index {
-        0..=15 => {
-            let [r, g, b] = ANSI[index];
-            Color32::from_rgb(r, g, b)
-        }
-        16..=231 => {
-            let value = index - 16;
-            let channel = |v| if v == 0 { 0 } else { (55 + v * 40) as u8 };
-            Color32::from_rgb(
-                channel(value / 36),
-                channel((value / 6) % 6),
-                channel(value % 6),
-            )
-        }
-        232..=255 => {
-            let value = (8 + (index - 232) * 10) as u8;
-            Color32::from_gray(value)
-        }
-        i if i == NamedColor::Background as usize => BACKGROUND,
-        i if i == NamedColor::Cursor as usize => ACCENT,
-        259..=266 => palette(index - 259, overrides).gamma_multiply(0.6),
-        _ => FOREGROUND,
-    }
-}
-
-pub fn rgb(color: Color32) -> Rgb {
-    Rgb {
-        r: color.r(),
-        g: color.g(),
-        b: color.b(),
-    }
+pub fn color(rgb: impl Into<Rgb>) -> Color32 {
+    let rgb = rgb.into();
+    Color32::from_rgb(rgb.r, rgb.g, rgb.b)
 }
 
 fn mouse_report(
@@ -692,13 +649,15 @@ fn mouse_report(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use whostty_core::alacritty_terminal::vte::ansi::Color;
 
     #[test]
     fn xterm_palette_and_sgr_mouse_release() {
         let colors = Colors::default();
-        assert_eq!(palette(16, &colors), Color32::BLACK);
-        assert_eq!(palette(231, &colors), Color32::WHITE);
-        assert_eq!(palette(232, &colors), Color32::from_gray(8));
+        let theme = whostty_core::theme::Palette::default();
+        assert_eq!(color(theme.indexed(16, &colors)), Color32::BLACK);
+        assert_eq!(color(theme.indexed(231, &colors)), Color32::WHITE);
+        assert_eq!(color(theme.indexed(232, &colors)), Color32::from_gray(8));
         assert_eq!(
             mouse_report(
                 0,
@@ -822,8 +781,18 @@ mod tests {
                             egui::UiBuilder::new()
                                 .max_rect(Rect::from_min_size(Pos2::ZERO, Vec2::new(250.0, 180.0))),
                             |ui| {
-                                let view =
-                                    show(ui, &mut session, 15.0, "", false, &mut state, None);
+                                let view = show(
+                                    ui,
+                                    &mut session,
+                                    &mut state,
+                                    Options {
+                                        font_size: 15.0,
+                                        composition: "",
+                                        focus: false,
+                                        theme: &whostty_core::theme::Palette::default(),
+                                        search: None,
+                                    },
+                                );
                                 reports.extend(view.input);
                                 opened.extend(view.open_url);
                             },

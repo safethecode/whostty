@@ -360,7 +360,10 @@ impl Whostty {
                         let color = {
                             let terminal =
                                 session.terminal.lock().unwrap_or_else(|e| e.into_inner());
-                            view::rgb(view::palette(index, terminal.term.colors()))
+                            self.settings
+                                .theme
+                                .colors()
+                                .indexed(index, terminal.term.colors())
                         };
                         if let Err(error) = session.write(format(color).into_bytes()) {
                             tab.error = Some(format!("{error:#}"));
@@ -671,6 +674,13 @@ impl Whostty {
         egui::Window::new("Preferences").open(&mut open).collapsible(false).resizable(false).default_width(420.0).show(ctx, |ui| {
             ui.label("Text");
             ui.add(egui::Slider::new(&mut self.settings.font_size, 8.0..=40.0).text("Font size"));
+            ui.horizontal(|ui| {
+                use whostty_core::theme::{Theme, Preset};
+                ui.label("Terminal colors");
+                ui.selectable_value(&mut self.settings.theme, Theme::Preset(Preset::Dark), "Dark");
+                ui.selectable_value(&mut self.settings.theme, Theme::Preset(Preset::Light), "Light");
+                if matches!(self.settings.theme, Theme::Custom(_)) { ui.label("Custom (config)"); }
+            });
             ui.add_space(12.0); ui.label("New tabs");
             let selected = self.settings.profiles[self.settings.default_profile].name.clone();
             egui::ComboBox::from_id_salt("default-profile").selected_text(selected).show_ui(ui, |ui| {
@@ -711,7 +721,7 @@ impl Whostty {
 
 impl eframe::App for Whostty {
     fn clear_color(&self, _visuals: &egui::Visuals) -> [f32; 4] {
-        BACKGROUND.to_normalized_gamma_f32()
+        view::color(self.settings.theme.colors().background).to_normalized_gamma_f32()
     }
 
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
@@ -887,7 +897,11 @@ impl eframe::App for Whostty {
         let mut close_pane = None;
         let mut restart_pane = false;
         egui::CentralPanel::default()
-            .frame(egui::Frame::new().fill(BACKGROUND).inner_margin(12))
+            .frame(
+                egui::Frame::new()
+                    .fill(view::color(self.settings.theme.colors().background))
+                    .inner_margin(12),
+            )
             .show(ctx, |ui| {
                 let Some(tab) = self.tabs.get_mut(self.active) else {
                     ui.centered_and_justified(|ui| {
@@ -914,21 +928,33 @@ impl eframe::App for Whostty {
                         ui.set_clip_rect(rect);
                         ui.set_min_size(rect.size());
                         if multiple {
-                            ui.horizontal(|ui| {
-                                if ui
-                                    .selectable_label(active, &pane.profile.name)
-                                    .on_hover_text(&pane.title)
-                                    .clicked()
-                                {
-                                    clicked = Some(id);
-                                }
-                                if ui.small_button("x").on_hover_text("Close pane").clicked() {
-                                    close_pane = Some(id);
-                                }
-                            });
+                            egui::Frame::new()
+                                .fill(Color32::from_rgb(25, 30, 36))
+                                .show(ui, |ui| {
+                                    ui.set_min_width(ui.available_width());
+                                    ui.horizontal(|ui| {
+                                        if ui
+                                            .selectable_label(active, &pane.profile.name)
+                                            .on_hover_text(&pane.title)
+                                            .clicked()
+                                        {
+                                            clicked = Some(id);
+                                        }
+                                        if ui
+                                            .small_button("x")
+                                            .on_hover_text("Close pane")
+                                            .clicked()
+                                        {
+                                            close_pane = Some(id);
+                                        }
+                                    });
+                                });
                         }
                         if let Some(error) = &pane.error {
-                            ui.colored_label(Color32::LIGHT_RED, error);
+                            ui.colored_label(
+                                view::color(self.settings.theme.colors().ansi[1]),
+                                error,
+                            );
                         }
                         if pane.session.is_none() || pane.exit.is_some() || pane.error.is_some() {
                             let label = if pane.session.is_none() {
@@ -945,11 +971,14 @@ impl eframe::App for Whostty {
                             let result = view::show(
                                 ui,
                                 session,
-                                self.settings.font_size,
-                                if active { &self.composition } else { "" },
-                                self.focus_terminal && active && !blocked,
                                 &mut pane.view,
-                                self.search_open.then_some(&pane.search),
+                                view::Options {
+                                    font_size: self.settings.font_size,
+                                    composition: if active { &self.composition } else { "" },
+                                    focus: self.focus_terminal && active && !blocked,
+                                    theme: &self.settings.theme.colors(),
+                                    search: self.search_open.then_some(&pane.search),
+                                },
                             );
                             if result.response.clicked()
                                 || result.response.drag_started()
@@ -984,7 +1013,8 @@ impl eframe::App for Whostty {
                             egui::Stroke::new(
                                 1.0,
                                 if active {
-                                    ACCENT.gamma_multiply(0.55)
+                                    view::color(self.settings.theme.colors().cursor)
+                                        .gamma_multiply(0.75)
                                 } else {
                                     Color32::TRANSPARENT
                                 },

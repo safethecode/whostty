@@ -74,6 +74,7 @@ PowerShell 7과 WSL은 해당 프로그램이 설치돼 있어야 한다. 기본
 
 ```toml
 font_size = 15.0
+theme = "dark" # or "light"
 scrollback = 10000
 default_profile = 0
 # font_path = 'C:\Windows\Fonts\consola.ttf'
@@ -98,6 +99,22 @@ args = ["-d", "Ubuntu", "--cd", "~"]
 사용자 스타일 파일은 해당 스타일의 같은 monospace 가족이어야 한다. 개별 파일은 최대 64 MiB다.
 글꼴 크기와 프로필의 저장은 Preferences의 Save preferences로 명시적으로 수행한다.
 
+Preferences의 Terminal colors에서 Dark/Light를 선택하면 즉시 미리 보고 Save preferences로 저장한다.
+사용자 색상은 위 `theme = ...` 줄 대신 별도의 테이블로 설정한다. 생략한 색상은 기본값을 사용한다.
+
+```toml
+[theme]
+background = "#101620"
+foreground = "#dce4ee"
+cursor = "#9ee8b2"
+selection = "#2a4a54"
+search = "#6b4f2a"
+# ansi = [정확히 16개의 "#RRGGBB" 색상]
+```
+
+색상은 #RRGGBB 형식이다. ANSI 0–15는 테마를 따르며 16–255와 truecolor도 지원한다.
+앱이 OSC로 바꾼 색은 우선 적용되고 OSC 리셋 시 선택된 테마 색으로 돌아간다.
+
 ## Windows 실기기 검증
 
 1. PowerShell에서 `Get-Location`, `Get-ChildItem`, 한글 입력·삭제·복사·붙여넣기, Ctrl+C 프로세스 중단을 확인한다.
@@ -113,6 +130,7 @@ args = ["-d", "Ubuntu", "--cd", "~"]
 11. 동기화 출력(2026) 종료 마커가 없는 앱도 약 150ms 기한 뒤 화면을 갱신해야 한다. TUI에서 좌/중/우 버튼 드래그 후 패널 밖에서 놓고, 창 포커스를 바꿨을 때 마우스가 눌린 상태로 남지 않는지 확인한다.
 12. 웹 URL 또는 OSC 8 링크 위에서 Ctrl을 누르면 실제 대상과 밑줄을 표시한다. Ctrl+클릭은 기본 브라우저로 열고 드래그·일반 클릭은 링크를 열지 않는다. file/임의 프로토콜 링크는 열지 않는다. TUI의 마우스 모드에서 Ctrl+클릭이 앱에 중복 전달되지 않는지 확인한다.
 13. Narrator에서 터미널 영역을 찾아 화면 텍스트·한글·결합 문자·커서/선택 위치를 읽는지 확인한다. 숨김(SGR 8) 텍스트는 접근성 값에도 나타나지 않아야 한다. 접근성 포커스로 다른 패널을 선택한 뒤 키 입력이 그 셸로 가는지 확인한다.
+14. Dark/Light/사용자 색상을 재로드·저장한 뒤 재실행한다. 분할 패널·선택·검색·커서·OSC 색 변경/리셋의 대비를 확인한다.
 
 문제 보고에는 Windows 빌드 번호, GPU/드라이버, 화면 배율, 사용 프로필, 재현 명령, 현상·예상 결과를 기록한다.
 설정 파일이나 화면을 공유할 때 토큰·개인 경로 등은 제거한다.
