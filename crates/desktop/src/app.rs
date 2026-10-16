@@ -199,15 +199,25 @@ impl Whostty {
         self.composition.clear();
     }
 
-    fn find(&mut self, backwards: bool, reset: bool) {
+    fn find(&mut self, ctx: &egui::Context, backwards: bool, reset: bool) {
         if let Some(pane) = self.pane_mut() {
             if let Some(session) = &pane.session {
-                let mut terminal = session
-                    .terminal
-                    .lock()
-                    .unwrap_or_else(|error| error.into_inner());
-                pane.search.find(&mut terminal, backwards, reset);
+                let repaint = ctx.clone();
+                pane.search.start(
+                    &session.terminal,
+                    backwards,
+                    reset,
+                    Arc::new(move || repaint.request_repaint()),
+                );
             }
+        }
+    }
+
+    fn close_search(&mut self) {
+        self.search_open = false;
+        self.focus_terminal = true;
+        for pane in self.tabs.iter_mut().flat_map(|tab| &mut tab.panes) {
+            pane.search.cancel();
         }
     }
 
@@ -273,6 +283,9 @@ impl Whostty {
                             .revision();
                         let status = if pane.search.query.is_empty() {
                             ""
+                        } else if pane.search.busy() {
+                            ui.spinner();
+                            "Searching…"
                         } else if pane.search.stale(revision) {
                             "Press Enter to search"
                         } else if pane.search.result(revision).is_some() {
@@ -289,11 +302,10 @@ impl Whostty {
                 });
             });
         if let Some((backwards, reset)) = action {
-            self.find(backwards, reset);
+            self.find(ctx, backwards, reset);
         }
         if close {
-            self.search_open = false;
-            self.focus_terminal = true;
+            self.close_search();
         }
     }
 
@@ -306,6 +318,7 @@ impl Whostty {
                 let mut terminal = session.terminal.lock().unwrap_or_else(|e| e.into_inner());
                 let now = std::time::Instant::now();
                 terminal.flush_sync(now);
+                tab.search.poll(&mut terminal);
                 if let Some(deadline) = terminal.sync_deadline() {
                     ctx.request_repaint_after(deadline.saturating_duration_since(now));
                 }
@@ -493,12 +506,11 @@ impl Whostty {
                     continue;
                 }
                 if self.search_open && *key == egui::Key::Escape {
-                    self.search_open = false;
-                    self.focus_terminal = true;
+                    self.close_search();
                     continue;
                 }
                 if self.search_open && *key == egui::Key::F3 {
-                    self.find(modifiers.shift, false);
+                    self.find(ctx, modifiers.shift, false);
                     continue;
                 }
                 if modifiers.ctrl && modifiers.shift && *key == egui::Key::T {
