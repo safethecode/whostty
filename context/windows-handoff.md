@@ -1,0 +1,106 @@
+# Windows PC 인계
+
+## 현재 상태
+
+Whostty는 Ghostty 소스 포크가 아닌 독립 Rust 터미널이다. Windows에서 portable-pty가 ConPTY를 열고,
+Alacritty가 VT 상태를 처리하며, eframe/wgpu가 네이티브 창에 그린다. Electron·브라우저 런타임은 없다.
+
+개발은 macOS에서 진행했다. 실제 셸 PTY 테스트와 Mac 네이티브 창 테스트를 수행했고,
+Windows GitHub Actions에서 컴파일·PTY 통합 테스트를 수행한다. **Windows 데스크톱에서의 실제 조작은 아직 검증하지 않았다.**
+Ghostty와의 성능·호환성 동등성은 검증하지 않았다.
+
+## 실행 파일 받기
+
+GitHub Actions의 **Windows package** 워크플로에서 main의 성공한 실행을 열고
+`whostty-windows-x64` 아티팩트를 다운로드한다. 아티팩트 안의 `whostty-windows-x64.zip`을 다시 풀고
+`whostty.exe`를 실행한다. ZIP에는 Whostty MIT 라이선스와 의존성 라이선스 고지가 동봉된다.
+코드 서명과 자동 업데이트는 아직 없다. 대상은 Windows x64이며 ARM64 패키지는 만들지 않는다.
+
+GitHub CLI를 사용하는 경우:
+
+```powershell
+gh run list --repo safethecode/Whostty --workflow windows-package.yml --branch main
+gh run download <성공한-run-id> --repo safethecode/Whostty --name whostty-windows-x64
+Get-FileHash .\whostty-windows-x64.zip -Algorithm SHA256
+```
+
+## 소스에서 실행
+
+필요한 도구: Git, Rust MSVC 도구 체인, Visual Studio Build Tools의 **Desktop development with C++** 및 Windows SDK.
+저장소의 `rust-toolchain.toml`이 Rust 1.88.0을 선택한다.
+
+```powershell
+git clone https://github.com/safethecode/Whostty.git
+cd Whostty
+git switch main
+cargo run --locked --package whostty
+```
+
+CI와 같은 휴대용 ZIP을 만들려면 PowerShell 7에서 실행한다:
+
+```powershell
+rustup target add x86_64-pc-windows-msvc
+cargo install cargo-about --version 0.9.2 --locked --features cli
+./scripts/build-windows.ps1
+```
+
+산출물은 `dist/whostty-windows-x64.zip` 및 SHA256 파일이다. 라이선스 고지 생성이 실패하면 패키징도 실패한다.
+빌드/테스트만 할 때는 cargo-about이나 PowerShell 7이 필요하지 않다.
+
+## 프로필 및 설정
+
+기본 설정: `%APPDATA%\Whostty\config.toml`. 첫 실행에 기본값을 생성한다.
+`WHOSTTY_CONFIG` 환경변수로 다른 파일을 지정할 수 있다. 메뉴 `...`에서 설정 파일 열기·재로드·저장이 가능하다.
+잘못된 설정은 덮어쓰지 않고 오류를 표시하며 기본값으로 실행한다. 설정 재로드는 기존 셸을 종료하지 않는다.
+
+기본 프로필: Windows PowerShell (`powershell.exe`), PowerShell 7 (`pwsh.exe`), WSL (`wsl.exe --cd ~`), cmd.
+PowerShell 7과 WSL은 해당 프로그램이 설치돼 있어야 한다. 기본 프로필은 PowerShell 5이며, 시작 디렉터리는 홈이다.
+프로필은 실행 파일과 인수 배열을 직접 전달한다. 셸 문자열을 자동으로 평가하지 않는다.
+
+```toml
+font_size = 15.0
+scrollback = 10000
+default_profile = 0
+# font_path = 'C:\Windows\Fonts\CascadiaMono.ttf'
+
+[[profiles]]
+name = "PowerShell"
+program = "powershell.exe"
+args = ["-NoLogo"]
+# working_directory = 'C:\dev'
+
+[[profiles]]
+name = "Ubuntu"
+program = "wsl.exe"
+args = ["-d", "Ubuntu", "--cd", "~"]
+```
+
+기본 글꼴은 Cascadia Mono 또는 Consolas, 한글 대체 글꼴은 맑은 고딕을 로드한다.
+글꼴 크기와 프로필의 저장은 Preferences의 Save preferences로 명시적으로 수행한다.
+
+## Windows 실기기 검증
+
+1. PowerShell에서 `Get-Location`, `Get-ChildItem`, 한글 입력·삭제·복사·붙여넣기, Ctrl+C 프로세스 중단을 확인한다.
+2. Ctrl+Shift+T, Ctrl+Tab/Shift+Ctrl+Tab, Ctrl+Shift+W로 탭 생성·이동·닫기 및 닫기 취소를 확인한다.
+3. Ctrl+Shift+C/V 또는 Ctrl+V로 복사·붙여넣기를 확인한다. 선택이 없을 때 Ctrl+C는 셸에 중단 문자를 보낸다.
+4. 터미널 안에서 `& C:\path\to\Whostty\scripts\windows-smoke.ps1`을 실행해 색·한글·대체 화면·스크롤백을 확인한다.
+5. 창을 계속 리사이즈하고 100/150/200% 배율 모니터 사이로 옮겨 그리드와 글꼴이 맞는지 확인한다.
+6. PowerShell 7, cmd, WSL 각각에서 실행·입력·크기 변경·종료를 확인한다. 설치하지 않은 프로필은 명확한 오류를 표시해야 한다.
+7. WSL에서 vim/less/top 같은 대체 화면 프로그램, 마우스 보고, bracketed paste를 확인한다. Shift+드래그는 TUI 마우스 모드에서도 선택한다.
+8. 한국어 IME 후보창 위치와 조합 확정 시 중복 입력 여부, AltGr 키보드 레이아웃을 확인한다.
+9. `exit` 후 종료 코드와 Restart session 버튼을 확인한다. 모든 탭을 닫은 뒤 새 터미널을 다시 열 수 있어야 한다.
+
+문제 보고에는 Windows 빌드 번호, GPU/드라이버, 화면 배율, 사용 프로필, 재현 명령, 현상·예상 결과를 기록한다.
+설정 파일이나 화면을 공유할 때 토큰·개인 경로 등은 제거한다.
+
+## 개발 검증 및 남은 범위
+
+```powershell
+cargo fmt --all -- --check
+cargo clippy --workspace --all-targets --locked -- -D warnings
+cargo test --workspace --locked
+```
+
+초기 구현은 분할 창, 검색, SSH 관리, 세션 복구, 이미지 프로토콜, ligature/복합 문자 shaping,
+완전한 접근성, 자동 업데이트를 제공하지 않는다. 꾸밈 밑줄은 기본 밑줄로 표시하며 italic 렌더링은 후속 범위다.
+ANSI·대체 화면 엔진 지원과 각 TUI의 전체 호환성은 구분한다. 성능 수치는 아직 측정하지 않았다.

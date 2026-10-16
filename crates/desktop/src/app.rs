@@ -116,7 +116,11 @@ impl Whostty {
             let Some(session) = &tab.session else {
                 continue;
             };
-            for event in session.events.try_iter().take(512) {
+            let events: Vec<_> = session.events.try_iter().take(512).collect();
+            if events.len() == 512 {
+                ctx.request_repaint();
+            }
+            for event in events {
                 match event {
                     SessionEvent::Exited(code) => tab.exit = Some(code),
                     SessionEvent::Error(error) => tab.error = Some(error),

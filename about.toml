@@ -1,0 +1,17 @@
+accepted = ["MIT", "Apache-2.0", "BSD-2-Clause", "BSD-3-Clause", "ISC", "Zlib", "BSL-1.0", "CC0-1.0", "Unicode-3.0", "Unicode-DFS-2016", "OFL-1.1", "Ubuntu-font-1.0", "CDLA-Permissive-2.0", "MPL-2.0"]
+targets = ["x86_64-pc-windows-msvc"]
+ignore-dev-dependencies = true
+
+[whostty.clarify]
+license = "MIT"
+[[whostty.clarify.files]]
+path = "../../context/LICENSE"
+license = "MIT"
+checksum = "0e6ad4beccfbbc2423fef037801d89de45c8789fce69cd9197c871a7a0a314e6"
+
+[whostty-core.clarify]
+license = "MIT"
+[[whostty-core.clarify.files]]
+path = "../../context/LICENSE"
+license = "MIT"
+checksum = "0e6ad4beccfbbc2423fef037801d89de45c8789fce69cd9197c871a7a0a314e6"

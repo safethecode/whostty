@@ -1,0 +1,10 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><title>Whostty third party licenses</title>
+<style>body{font:16px system-ui;max-width:900px;margin:40px auto;padding:0 20px}pre{white-space:pre-wrap;font:13px monospace}section{margin:40px 0}</style>
+<h1>Whostty third party licenses</h1>
+{{#each licenses}}
+<section><h2>{{name}}</h2><ul>
+{{#each used_by}}<li>{{crate.name}} {{crate.version}} — {{crate.repository}} — <a href="https://crates.io/api/v1/crates/{{crate.name}}/{{crate.version}}/download">Unmodified source archive</a></li>{{/each}}
+</ul><pre>{{text}}</pre></section>
+{{/each}}
+</html>
