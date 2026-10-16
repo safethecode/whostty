@@ -103,6 +103,10 @@ cargo clippy --workspace --all-targets --locked -- -D warnings
 cargo test --workspace --locked
 ```
 
-초기 구현은 분할 창, 검색, SSH 관리, 세션 복구, 이미지 프로토콜, ligature/복합 문자 shaping,
+현재 구현은 SSH 관리, 세션 복구, 이미지 프로토콜, ligature/복합 문자 shaping,
 완전한 접근성, 자동 업데이트를 제공하지 않는다. 꾸밈 밑줄은 기본 밑줄로 표시하며 italic 렌더링은 후속 범위다.
 ANSI·대체 화면 엔진 지원과 각 TUI의 전체 호환성은 구분한다. 성능 수치는 아직 측정하지 않았다.
+
+분할 창은 탭당 최대 8개를 지원한다. Ctrl+F로 활성 패널의 스크롤백을 검색하고 F3/Shift+F3 또는
+Enter/Shift+Enter로 결과를 이동한다. 대소문자 구분과 정규식을 선택할 수 있고 Escape로 검색을 닫는다.
+새 출력·리사이즈로 결과 좌표가 달라지면 Enter로 다시 검색한다. 결합 부호를 포함한 전체 문자열 매칭은 아직 제한된다.

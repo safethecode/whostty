@@ -28,6 +28,7 @@ pub fn show(
     composition: &str,
     focus: bool,
     wheel: &mut f32,
+    search: Option<&whostty_core::search::Search>,
 ) -> View {
     let (rect, response) = ui.allocate_exact_size(ui.available_size(), Sense::click_and_drag());
     let response = response.on_hover_cursor(egui::CursorIcon::Text);
@@ -62,6 +63,7 @@ pub fn show(
     let mut terminal = terminal_arc
         .lock()
         .unwrap_or_else(|error| error.into_inner());
+    let search_match = search.and_then(|search| search.result(terminal.revision()));
     let term = &mut terminal.term;
     let mode = *term.mode();
     let mouse = mode.intersects(TermMode::MOUSE_MODE);
@@ -219,6 +221,17 @@ pub fn show(
             },
             colors,
         );
+        if search_match.is_some_and(|range| {
+            range.contains(&indexed.point)
+                || (indexed.flags.contains(Flags::WIDE_CHAR_SPACER)
+                    && indexed.point.column.0 > 0
+                    && range.contains(&Point::new(
+                        indexed.point.line,
+                        Column(indexed.point.column.0 - 1),
+                    )))
+        }) {
+            bg = Color32::from_rgb(103, 78, 35);
+        }
         if selection.is_some_and(|range| range.contains(indexed.point)) {
             bg = Color32::from_rgb(51, 77, 70);
         }

@@ -172,7 +172,7 @@ impl Session {
                 .terminal
                 .lock()
                 .map_err(|_| anyhow::anyhow!("Terminal lock poisoned"))?;
-            terminal.term.resize(size);
+            terminal.resize(size);
         }
         self.master.resize(pty_size(size)).context("Resize PTY")?;
         self.size = size;
