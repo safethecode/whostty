@@ -82,7 +82,10 @@ pub fn at<T>(term: &Term<T>, point: Point) -> Option<Link> {
     }
     let token = |point: Point| {
         let cell = &term.grid()[point];
-        (cell.flags.contains(Flags::WIDE_CHAR_SPACER) || !cell.c.is_whitespace())
+        (cell
+            .flags
+            .intersects(Flags::WIDE_CHAR_SPACER | Flags::LEADING_WIDE_CHAR_SPACER)
+            || !cell.c.is_whitespace())
             && !cell.flags.contains(Flags::HIDDEN)
             && !matches!(cell.c, '<' | '>' | '"' | '\'')
     };
@@ -191,5 +194,13 @@ mod tests {
         terminal.feed(b"https://hard\r\nnewline.invalid");
         let link = at(&terminal.term, Point::new(Line(0), Column(3))).unwrap();
         assert_eq!(link.uri, "https://hard/");
+    }
+
+    #[test]
+    fn unicode_hostnames_survive_a_wide_character_wrapping_at_the_right_edge() {
+        let mut terminal = Terminal::new(Size::new(10, 5), 100, VoidListener);
+        terminal.feed("http://例子.test/x".as_bytes());
+        let link = at(&terminal.term, Point::new(Line(1), Column(0))).unwrap();
+        assert_eq!(link.uri, "http://xn--fsqu00a.test/x");
     }
 }
