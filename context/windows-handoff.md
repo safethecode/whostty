@@ -37,6 +37,19 @@ git switch main
 cargo run --locked --package whostty
 ```
 
+특정 디렉터리·프로필로 시작하거나 프로그램을 직접 실행할 수 있다:
+
+```powershell
+.\whostty.exe --working-directory 'C:\dev' --profile 'PowerShell 7'
+.\whostty.exe --config 'C:\dev\whostty.toml' -e pwsh.exe -NoLogo
+.\whostty.exe --help
+```
+
+`-e` 또는 `--` 뒤의 인수는 Whostty 옵션으로 해석하지 않고 프로그램에 그대로 전달한다.
+셸 문자열 평가를 자동으로 추가하지 않는다. 실행 옵션은 첫 탭에만 적용되며 설정 파일의 프로필을 바꾸지 않는다.
+도움말·버전·잘못된 옵션은 GUI를 만들지 않는다. Windows의 기존 콘솔과 출력 리다이렉션을 사용하고,
+콘솔 없이 직접 실행한 경우에는 메시지 창을 표시한다.
+
 CI와 같은 휴대용 ZIP을 만들려면 PowerShell 7에서 실행한다:
 
 ```powershell
