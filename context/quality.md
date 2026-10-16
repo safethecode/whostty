@@ -25,9 +25,14 @@ Ghostty 수준의 완성도를 달성했다고 결론 내릴 수 없다. 현재 
 
 ## 다음 개선 순서
 
-1. PR #7 완료: 동기화 출력 타임아웃/EOF 복구, 모드별 Enter, TUI 마우스 캡처·포커스 보고.
-2. PR #8 완료: 백그라운드 대용량 검색과 오래된 결과 제거.
-3. 글꼴 스타일·장식과 렌더링을 검증하고, 이후 shaping 기반을 재검토한다.
-4. 일상 사용 기능과 Windows 실행·패키지 품질을 지속적으로 개선한다.
+1. 셀별 글자 배치를 run 단위 shaping과 glyph cache로 개선한다. ligature·결합 부호·emoji·DPI·커서·선택의 좌표 일관성을 함께 검증해야 한다.
+2. 고급 키보드 프로토콜에 필요한 원래 키·수정키·누름/해제 정보를 보존한다. 백엔드가 잃는 정보를 확인하기 전에는 프로토콜 지원을 광고하지 않는다.
+3. 셸 명령 경계·명령 탐색, WSL/SSH의 작업 디렉터리 계승, Bash/Zsh 연동을 확장한다.
+4. Windows PC에서 IME/AltGr·다중 배율·Narrator·실제 TUI·장시간 출력/종료를 검증하고 재현 자료를 남긴다.
+5. 동일 장비에서 입력 지연·GPU 프레임·메모리와 설치/업데이트 경로를 측정한다. 자동 테스트 통과와 Ghostty 동등성 판단을 분리한다.
+
+PR #7–#17에서 VT 입력·검색·글꼴 스타일·실행 옵션·링크·접근성·설정 저장·테마·실행 진단·PowerShell CWD·키 바인딩을 개선했다.
+Windows 배포 ZIP은 실제 ConPTY/PowerShell 출력과 wgpu 화면 readback을 검사한다. CI의 Microsoft Basic Render Driver/DX12/CPU 결과는
+소프트웨어 렌더링 검증이며 하드웨어 성능이나 Windows 실기기 조작 검증을 대신하지 않는다.
 
 Windows 네이티브 진단을 처음 실행하면서 eframe의 기본 기능을 끈 빌드에 DirectX 백엔드가 빠져 Vulkan 드라이버가 없는 Windows에서 시작하지 못하는 문제를 발견했다. Windows 대상에 DirectX 12를 명시적으로 포함하며(Vulkan도 wgpu 기본 Windows 대상으로 포함), 단순 빌드 성공을 실행 성공으로 간주하지 않는다.
