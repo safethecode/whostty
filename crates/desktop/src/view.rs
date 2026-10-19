@@ -792,6 +792,80 @@ mod tests {
     }
 
     #[test]
+    fn focused_terminal_exports_a_caret_sized_native_ime_area() {
+        use std::{
+            sync::Arc,
+            time::{Duration, Instant},
+        };
+        use whostty_core::config::Profile;
+        #[cfg(windows)]
+        let profile = Profile::new(
+            "ime-area",
+            "powershell.exe",
+            &[
+                "-NoLogo",
+                "-NoProfile",
+                "-Command",
+                "[Console]::Write('ime-area-ready'); exit 0",
+            ],
+        );
+        #[cfg(not(windows))]
+        let profile = Profile::new("ime-area", "/bin/sh", &["-c", "printf ime-area-ready"]);
+        let mut session =
+            Session::spawn(&profile, Size::new(80, 24), 100, Arc::new(|| {})).unwrap();
+        let deadline = Instant::now() + Duration::from_secs(15);
+        while !session
+            .terminal
+            .lock()
+            .unwrap()
+            .text()
+            .contains("ime-area-ready")
+        {
+            assert!(Instant::now() < deadline, "IME area fixture did not start");
+            std::thread::sleep(Duration::from_millis(20));
+        }
+        session.terminal.lock().unwrap().feed(b"\x1b[3;5H");
+        let ctx = egui::Context::default();
+        let mut state = ViewState::default();
+        let output = ctx.run(
+            egui::RawInput {
+                screen_rect: Some(Rect::from_min_size(Pos2::ZERO, Vec2::new(800.0, 500.0))),
+                ..Default::default()
+            },
+            |ctx| {
+                egui::CentralPanel::default().show(ctx, |ui| {
+                    show(
+                        ui,
+                        &mut session,
+                        &mut state,
+                        Options {
+                            font_size: 20.0,
+                            composition: "한",
+                            focus: true,
+                            theme: &whostty_core::theme::Palette::default(),
+                            search: None,
+                        },
+                    );
+                });
+            },
+        );
+        let ime = output
+            .platform_output
+            .ime
+            .expect("Focused terminal must allow native IME");
+        assert!(
+            ime.rect.width() <= 40.0 && ime.rect.height() <= 40.0,
+            "Native IME received pane bounds: {:?}",
+            ime.rect
+        );
+        assert!(ime.rect.contains(ime.cursor_rect.center()));
+        assert!(
+            ime.rect.min.x > 10.0 && ime.rect.min.y > 20.0,
+            "Native IME must follow the moved terminal cursor"
+        );
+    }
+
+    #[test]
     fn xterm_palette_and_sgr_mouse_release() {
         let colors = Colors::default();
         let theme = whostty_core::theme::Palette::default();
