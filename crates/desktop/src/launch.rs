@@ -209,4 +209,17 @@ mod tests {
         ));
         assert!(parse(args(&["--check", "--profile", "PowerShell"])).is_err());
     }
+
+    #[test]
+    fn runtime_check_accepts_explicit_rendering_scales() {
+        for scale in ["1", "1.25", "1.5", "2", "4"] {
+            assert!(
+                matches!(
+                    parse(args(&["--check", "--check-scale", scale])),
+                    Ok(Action::Run(Launch { check: true, .. }))
+                ),
+                "Rejected runtime rendering scale {scale}"
+            );
+        }
+    }
 }
