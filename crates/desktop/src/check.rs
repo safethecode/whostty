@@ -22,7 +22,8 @@ fn probe_profile() -> Profile {
     #[cfg(windows)]
     {
         let script = format!(
-            "[Console]::WriteLine('{INPUT_PROMPT}'); \
+            "[Console]::InputEncoding = [Text.UTF8Encoding]::new($false); \
+             [Console]::WriteLine('{INPUT_PROMPT}'); \
              $value = [Console]::ReadLine(); \
              if (-not [string]::Equals($value, '{CHECK_INPUT}', [StringComparison]::Ordinal)) {{ exit 9 }}; \
              [Console]::WriteLine(([string][char]27) + '[38;2;12;200;34m{SUCCESS_MARKER}' + [char]27 + '[0m'); exit 0"
@@ -301,8 +302,20 @@ mod tests {
             ("whostty-input-한글-é-😀", 9),
             ("incorrect-input", 9),
         ] {
+            let profile = probe_profile();
+            #[cfg(windows)]
+            let profile = {
+                let mut profile = profile;
+                // CI commonly starts consoles with an OEM code page. The probe must
+                // select UTF-8 itself rather than inherit this machine's locale.
+                let script = profile.args.last_mut().unwrap();
+                *script = format!(
+                    "[Console]::InputEncoding = [Text.Encoding]::GetEncoding(437); {script}"
+                );
+                profile
+            };
             let session =
-                Session::spawn(&probe_profile(), Size::new(80, 24), 100, Arc::new(|| {})).unwrap();
+                Session::spawn(&profile, Size::new(80, 24), 100, Arc::new(|| {})).unwrap();
             wait_until(|| {
                 session
                     .terminal
