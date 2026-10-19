@@ -225,13 +225,19 @@ mod tests {
 
     #[test]
     fn runtime_check_accepts_explicit_rendering_scales() {
-        for scale in ["1", "1.25", "1.5", "2", "4"] {
+        for (scale, expected) in [
+            ("1", 1.0),
+            ("1.25", 1.25),
+            ("1.5", 1.5),
+            ("2", 2.0),
+            ("4", 4.0),
+        ] {
             let Action::Run(launch) = parse(args(&["--check", "--check-scale", scale])).unwrap()
             else {
                 panic!("Expected runtime check")
             };
             assert!(launch.check);
-            assert_eq!(launch.check_scale, Some(scale.parse().unwrap()));
+            assert_eq!(launch.check_scale, Some(expected));
         }
     }
 

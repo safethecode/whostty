@@ -30,7 +30,13 @@ fn probe_profile() -> Profile {
         Profile::new(
             "Runtime check",
             "powershell.exe",
-            &["-NoLogo", "-NoProfile", "-NonInteractive", "-Command", &script],
+            &[
+                "-NoLogo",
+                "-NoProfile",
+                "-NonInteractive",
+                "-Command",
+                &script,
+            ],
         )
     }
     #[cfg(not(windows))]
@@ -44,6 +50,17 @@ fn probe_profile() -> Profile {
     }
 }
 
+fn apply_pending_scale(ctx: &egui::Context, pending: &mut Option<f32>) -> bool {
+    let Some(scale) = pending.take() else {
+        return false;
+    };
+    // Native monitor scale is available only after the first RawInput. The zoom
+    // change takes effect next pass, so defer all probe/render work until then.
+    ctx.set_pixels_per_point(scale);
+    ctx.request_repaint();
+    true
+}
+
 pub struct CheckApp {
     session: Session,
     view: view::ViewState,
@@ -53,6 +70,7 @@ pub struct CheckApp {
     started: Instant,
     input_sent: bool,
     requested_scale: Option<f32>,
+    pending_scale: Option<f32>,
     requested: bool,
     done: bool,
 }
@@ -67,9 +85,6 @@ impl CheckApp {
         let settings = Settings::default();
         let _ = fonts::configure_fonts(&cc.egui_ctx, &settings);
         cc.egui_ctx.set_visuals(egui::Visuals::dark());
-        if let Some(scale) = scale {
-            cc.egui_ctx.set_pixels_per_point(scale);
-        }
         let repaint = cc.egui_ctx.clone();
         let session = Session::spawn(
             &probe_profile(),
@@ -93,6 +108,7 @@ impl CheckApp {
             started: Instant::now(),
             input_sent: false,
             requested_scale: scale,
+            pending_scale: scale,
             requested: false,
             done: false,
         })
@@ -174,6 +190,9 @@ impl eframe::App for CheckApp {
         if self.done {
             return;
         }
+        if apply_pending_scale(ctx, &mut self.pending_scale) {
+            return;
+        }
         let _ = self.session.events.try_iter().take(1024).count();
         let text = self
             .session
@@ -251,20 +270,47 @@ mod tests {
     }
 
     #[test]
+    fn requested_scale_waits_for_native_monitor_input_and_the_next_pass() {
+        for native in [1.0, 1.25, 1.5, 2.0] {
+            for requested in [None, Some(1.0), Some(1.25), Some(1.5), Some(2.0)] {
+                let ctx = egui::Context::default();
+                let mut pending = requested;
+                let mut input = egui::RawInput::default();
+                input
+                    .viewports
+                    .get_mut(&egui::ViewportId::ROOT)
+                    .unwrap()
+                    .native_pixels_per_point = Some(native);
+                assert_eq!(ctx.native_pixels_per_point(), None);
+                let _ = ctx.run(input.clone(), |ctx| {
+                    assert_eq!(apply_pending_scale(ctx, &mut pending), requested.is_some());
+                });
+                let _ = ctx.run(input, |ctx| {
+                    assert!(!apply_pending_scale(ctx, &mut pending));
+                    assert_eq!(ctx.native_pixels_per_point(), Some(native));
+                    assert!((ctx.pixels_per_point() - requested.unwrap_or(native)).abs() < 0.01);
+                });
+            }
+        }
+    }
+
+    #[test]
     fn unicode_probe_requires_exact_native_pty_input() {
         for (input, code) in [
-            (CHECK_INPUT, 0),
+            ("whostty-input-한글-e\u{301}-😀", 0),
             ("whostty-input-한글-é-😀", 9),
             ("incorrect-input", 9),
         ] {
-            let session = Session::spawn(
-                &probe_profile(),
-                Size::new(80, 24),
-                100,
-                Arc::new(|| {}),
-            )
-            .unwrap();
-            wait_until(|| session.terminal.lock().unwrap().text().contains(INPUT_PROMPT));
+            let session =
+                Session::spawn(&probe_profile(), Size::new(80, 24), 100, Arc::new(|| {})).unwrap();
+            wait_until(|| {
+                session
+                    .terminal
+                    .lock()
+                    .unwrap()
+                    .text()
+                    .contains(INPUT_PROMPT)
+            });
             session.write(format!("{input}\r").into_bytes()).unwrap();
             wait_until(|| session.exit_state().is_some());
             assert_eq!(session.exit_state(), Some(ExitState::Exited(code)));
