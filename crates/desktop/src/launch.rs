@@ -1,7 +1,7 @@
 use std::{ffi::OsString, path::PathBuf};
 use whostty_core::config::{Profile, Settings};
 
-pub const HELP: &str = "Whostty — a native Windows terminal\n\nUsage: whostty [OPTIONS] [-e PROGRAM [ARGS...]]\n\n  -d, --working-directory PATH  Start in this directory\n  -p, --profile NAME            Select a configured profile\n      --config PATH             Use this configuration file\n  -e, --command PROGRAM [...]   Run a program without shell evaluation\n      -- PROGRAM [...]         End options and run a program\n      --check                   Check Unicode PTY input and GPU rendering\n      --check-scale FACTOR      Set check rendering scale (1 to 4)\n  -h, --help                    Show help\n  -V, --version                 Show version\n\nCommand and directory overrides apply to the initial tab.\nNew tabs continue to use configured profiles.\n";
+pub const HELP: &str = "Whostty — a native Windows terminal\n\nUsage: whostty [OPTIONS] [-e PROGRAM [ARGS...]]\n\n  -d, --working-directory PATH  Start in this directory\n  -p, --profile NAME            Select a configured profile\n      --config PATH             Use this configuration file\n  -e, --command PROGRAM [...]   Run a program without shell evaluation\n      -- PROGRAM [...]         End options and run a program\n      --check                   Check Unicode PTY input and GPU rendering\n      --check-scale FACTOR      Set check rendering scale (1 to 4)\n      --check-latency COUNT     Measure 10 to 2000 PTY/GPU roundtrips\n  -h, --help                    Show help\n  -V, --version                 Show version\n\nCommand and directory overrides apply to the initial tab.\nNew tabs continue to use configured profiles.\n";
 
 #[derive(Debug, Default)]
 pub struct Launch {
@@ -11,6 +11,7 @@ pub struct Launch {
     pub command: Option<(String, Vec<String>)>,
     pub check: bool,
     pub check_scale: Option<f32>,
+    pub check_samples: Option<usize>,
 }
 
 #[derive(Debug)]
@@ -28,6 +29,15 @@ pub fn parse(args: impl IntoIterator<Item = OsString>) -> Result<Action, String>
             Some("-h" | "--help") => return Ok(Action::Help),
             Some("-V" | "--version") => return Ok(Action::Version),
             Some("--check") => launch.check = true,
+            Some("--check-latency") => {
+                let value = unicode(args.next().ok_or("--check-latency needs a sample count")?)?;
+                let count = value
+                    .parse::<usize>()
+                    .ok()
+                    .filter(|count| (10..=2000).contains(count))
+                    .ok_or("--check-latency needs an integer sample count from 10 to 2000")?;
+                launch.check_samples = Some(count);
+            }
             Some("--check-scale") => {
                 let value = unicode(args.next().ok_or("--check-scale needs a factor")?)?;
                 let scale = value
@@ -71,6 +81,9 @@ pub fn parse(args: impl IntoIterator<Item = OsString>) -> Result<Action, String>
     }
     if launch.check_scale.is_some() && !launch.check {
         return Err("--check-scale requires --check".into());
+    }
+    if launch.check_samples.is_some() && !launch.check {
+        return Err("--check-latency requires --check".into());
     }
     if launch.check
         && (launch.config.is_some()
@@ -252,6 +265,36 @@ mod tests {
             vec!["--check", "--check-scale", "1,25"],
             vec!["--check-scale", "1.25"],
             vec!["--check", "--check-scale", "1.25", "-e", "tool"],
+        ] {
+            assert!(parse(args(&values)).is_err(), "Accepted {values:?}");
+        }
+    }
+
+    #[test]
+    fn latency_check_accepts_bounded_samples_with_rendering_scale() {
+        for (count, expected) in [("10", 10), ("200", 200), ("2000", 2000)] {
+            let Action::Run(launch) = parse(args(&[
+                "--check",
+                "--check-scale",
+                "1.25",
+                "--check-latency",
+                count,
+            ]))
+            .unwrap() else {
+                panic!("Expected runtime latency check")
+            };
+            assert!(launch.check);
+            assert_eq!(launch.check_scale, Some(1.25));
+            assert_eq!(launch.check_samples, Some(expected));
+        }
+        for values in [
+            vec!["--check", "--check-latency"],
+            vec!["--check", "--check-latency", "9"],
+            vec!["--check", "--check-latency", "2001"],
+            vec!["--check", "--check-latency", "1.5"],
+            vec!["--check", "--check-latency", "-1"],
+            vec!["--check-latency", "10"],
+            vec!["--check", "--check-latency", "10", "-e", "tool"],
         ] {
             assert!(parse(args(&values)).is_err(), "Accepted {values:?}");
         }

@@ -122,6 +122,7 @@ fn run(launch: launch::Launch) -> eframe::Result<Option<serde_json::Value>> {
                     cc,
                     output,
                     launch.check_scale,
+                    launch.check_samples,
                 )?))
             } else {
                 Ok(Box::new(app::Whostty::new(cc, launch)?))
