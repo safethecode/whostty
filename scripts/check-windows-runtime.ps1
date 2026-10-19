@@ -1,7 +1,8 @@
 #requires -Version 7.0
 param(
     [Parameter(Mandatory = $true)][string]$Executable,
-    [string]$ReportPath
+    [string]$ReportPath,
+    [ValidateRange(1.0, 4.0)][float]$Scale = 1.0
 )
 
 $ErrorActionPreference = 'Stop'
@@ -12,6 +13,8 @@ try {
     $startInfo = [Diagnostics.ProcessStartInfo]::new()
     $startInfo.FileName = (Resolve-Path -LiteralPath $Executable).ProviderPath
     $startInfo.ArgumentList.Add('--check')
+    $startInfo.ArgumentList.Add('--check-scale')
+    $startInfo.ArgumentList.Add($Scale.ToString('R', [Globalization.CultureInfo]::InvariantCulture))
     $startInfo.UseShellExecute = $false
     $startInfo.RedirectStandardOutput = $true
     $startInfo.RedirectStandardError = $true
@@ -32,8 +35,11 @@ try {
     $stderr = $stderrTask.GetAwaiter().GetResult()
     if ($nativeCheckProcess.ExitCode -ne 0) { throw "Native runtime check failed: $stderr $stdout" }
     $runtimeReport = $stdout.Trim() | ConvertFrom-Json
-    if (-not $runtimeReport.ok -or -not $runtimeReport.pty -or -not $runtimeReport.native_renderer -or -not $runtimeReport.text_shaping -or $runtimeReport.colored_pixels -lt 20) {
+    if (-not $runtimeReport.ok -or -not $runtimeReport.pty -or -not $runtimeReport.input_roundtrip -or -not $runtimeReport.native_renderer -or -not $runtimeReport.text_shaping -or $runtimeReport.colored_pixels -lt 20) {
         throw "Native runtime check did not verify the PTY and rendered pixels: $stdout"
+    }
+    if ([Math]::Abs($runtimeReport.pixels_per_point - $Scale) -ge 0.01) {
+        throw "Native runtime check used an unexpected rendering scale: $stdout"
     }
     if (Test-Path -LiteralPath $startInfo.Environment['WHOSTTY_CONFIG']) { throw 'Runtime check wrote user configuration' }
     if ($ReportPath) { [IO.File]::WriteAllText([IO.Path]::GetFullPath($ReportPath), $stdout.Trim(), [Text.UTF8Encoding]::new($false)) }

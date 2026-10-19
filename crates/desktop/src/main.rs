@@ -118,7 +118,7 @@ fn run(launch: launch::Launch) -> eframe::Result<Option<serde_json::Value>> {
         options,
         Box::new(move |cc| {
             if check {
-                Ok(Box::new(check::CheckApp::new(cc, output)?))
+                Ok(Box::new(check::CheckApp::new(cc, output, launch.check_scale)?))
             } else {
                 Ok(Box::new(app::Whostty::new(cc, launch)?))
             }

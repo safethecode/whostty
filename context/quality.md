@@ -2,7 +2,8 @@
 
 사용자는 Ghostty 수준이 될 때까지 개발을 계속하고, 모든 변경을 PR로 나눠 커밋·푸시·리뷰·머지하도록 요청했다.
 완료 여부는 기능 개수가 아니라 아래 근거로 판단한다. 문서는 context/에만 둔다.
-현재 개발 장비는 macOS이며 Windows 데스크톱 조작은 추후 사용자 PC에서 검증한다.
+초기 개발은 macOS에서 진행했다. 현재 Windows 11 / RTX 3080 Ti에서도 배포본 자동 진단을 수행하며,
+IME·WSL·TUI의 실제 데스크톱 조작과 장시간 안정성은 별도 검증한다.
 
 참고: [Ghostty 기능](https://ghostty.org/docs/features), [설정](https://ghostty.org/docs/config/reference),
 [xterm 제어 시퀀스](https://invisible-island.net/xterm/ctlseqs/ctlseqs.html).
