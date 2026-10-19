@@ -2,7 +2,8 @@
 
 사용자는 Ghostty 수준이 될 때까지 개발을 계속하고, 모든 변경을 PR로 나눠 커밋·푸시·리뷰·머지하도록 요청했다.
 완료 여부는 기능 개수가 아니라 아래 근거로 판단한다. 문서는 context/에만 둔다.
-현재 개발 장비는 macOS이며 Windows 데스크톱 조작은 추후 사용자 PC에서 검증한다.
+초기 개발은 macOS에서 진행했다. 현재 Windows 11 / RTX 3080 Ti에서도 배포본 자동 진단을 수행하며,
+IME·WSL·TUI의 실제 데스크톱 조작과 장시간 안정성은 별도 검증한다.
 
 참고: [Ghostty 기능](https://ghostty.org/docs/features), [설정](https://ghostty.org/docs/config/reference),
 [xterm 제어 시퀀스](https://invisible-island.net/xterm/ctlseqs/ctlseqs.html).
@@ -36,3 +37,30 @@ Windows 배포 ZIP은 실제 ConPTY/PowerShell 출력과 wgpu 화면 readback을
 소프트웨어 렌더링 검증이며 하드웨어 성능이나 Windows 실기기 조작 검증을 대신하지 않는다.
 
 Windows 네이티브 진단을 처음 실행하면서 eframe의 기본 기능을 끈 빌드에 DirectX 백엔드가 빠져 Vulkan 드라이버가 없는 Windows에서 시작하지 못하는 문제를 발견했다. Windows 대상에 DirectX 12를 명시적으로 포함하며(Vulkan도 wgpu 기본 Windows 대상으로 포함), 단순 빌드 성공을 실행 성공으로 간주하지 않는다.
+
+## 2026-10-20 Windows 실기기 자동 진단
+
+[PR #23](https://github.com/safethecode/whostty/pull/23)은 `--check`에 실제 PTY 유니코드 입력 왕복과
+명시적 렌더링 배율을 추가한다. 준비 메시지 이후 한글·분해된 결합 문자·이모지를 보내고, 셸이 원문과
+정확히 일치한다고 확인한 뒤에만 색상 출력과 종료 코드 0을 허용한다. 정규화 형태가 다르거나 잘못된 입력은 거부한다.
+Windows 진단용 셸은 UTF-8 입력을 명시한다. CP437에서 문자가 대체되는 실패를 실제 ConPTY로 재현했고,
+회귀 테스트도 CP437을 먼저 설정해 사용자 장비의 기본 코드페이지에 의존하지 않도록 한다.
+
+배율은 첫 native viewport 입력을 받은 뒤 적용하고 다음 pass부터 검사한다. 생성자에서 먼저 적용하면
+모니터 배율이 중복 곱해지는 문제를 수정했다. headless egui 테스트는 native 100·125·150·200%와
+배율 생략/100·125·150·200%의 20개 조합을 검사한다.
+
+검증한 제품 소스는 `92534d4`다. [Rust CI](https://github.com/safethecode/whostty/actions/runs/39340992197)는
+Windows 63개·macOS 61개 테스트와 Clippy를 통과했다. 명시 실행용 CPU 벤치마크는 플랫폼마다 1개씩 기본 실행에서 제외한다.
+Python 고지 테스트 3개도 통과했다.
+[배포 CI](https://github.com/safethecode/whostty/actions/runs/39340992188)는 DX12/CPU 어댑터에서
+100·125·150·200%의 유니코드 왕복·shaped glyph·GPU readback 검사를 모두 통과했다.
+
+같은 ZIP을 Windows 11 Pro 10.0.26100 / NVIDIA GeForce RTX 3080 Ti에서 다시 검사했다.
+체크섬·PE·DPI manifest·정적 CRT·라이선스 고지를 검증했고 Vulkan 100·125·150·200·400%,
+DirectX 12 100·125·150·200%에서 모두 `input_roundtrip`, `native_renderer`, `text_shaping`, `ok`가 true였다.
+이 장비의 실제 모니터 배율은 100%이며, 위 배율 검사는 egui 렌더링 배율 오버라이드다.
+Vulkan 100·125·150·200%를 순환하는 연속 20회 재실행도 모두 통과했다. 이는 짧은 시작/종료 반복 검사다.
+
+이 결과는 실제 IME 후보창, 모니터 간 DPI 전환, 이모지 표시 품질, WSL/TUI 조작,
+장시간 안정성 또는 입력 지연·GPU 프레임 성능 측정의 완료를 뜻하지 않는다.

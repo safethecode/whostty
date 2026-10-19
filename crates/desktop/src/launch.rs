@@ -1,7 +1,7 @@
 use std::{ffi::OsString, path::PathBuf};
 use whostty_core::config::{Profile, Settings};
 
-pub const HELP: &str = "Whostty — a native Windows terminal\n\nUsage: whostty [OPTIONS] [-e PROGRAM [ARGS...]]\n\n  -d, --working-directory PATH  Start in this directory\n  -p, --profile NAME            Select a configured profile\n      --config PATH             Use this configuration file\n  -e, --command PROGRAM [...]   Run a program without shell evaluation\n      -- PROGRAM [...]         End options and run a program\n      --check                   Check terminal startup and rendering\n  -h, --help                    Show help\n  -V, --version                 Show version\n\nCommand and directory overrides apply to the initial tab.\nNew tabs continue to use configured profiles.\n";
+pub const HELP: &str = "Whostty — a native Windows terminal\n\nUsage: whostty [OPTIONS] [-e PROGRAM [ARGS...]]\n\n  -d, --working-directory PATH  Start in this directory\n  -p, --profile NAME            Select a configured profile\n      --config PATH             Use this configuration file\n  -e, --command PROGRAM [...]   Run a program without shell evaluation\n      -- PROGRAM [...]         End options and run a program\n      --check                   Check Unicode PTY input and GPU rendering\n      --check-scale FACTOR      Set check rendering scale (1 to 4)\n  -h, --help                    Show help\n  -V, --version                 Show version\n\nCommand and directory overrides apply to the initial tab.\nNew tabs continue to use configured profiles.\n";
 
 #[derive(Debug, Default)]
 pub struct Launch {
@@ -10,6 +10,7 @@ pub struct Launch {
     pub profile: Option<String>,
     pub command: Option<(String, Vec<String>)>,
     pub check: bool,
+    pub check_scale: Option<f32>,
 }
 
 #[derive(Debug)]
@@ -27,6 +28,15 @@ pub fn parse(args: impl IntoIterator<Item = OsString>) -> Result<Action, String>
             Some("-h" | "--help") => return Ok(Action::Help),
             Some("-V" | "--version") => return Ok(Action::Version),
             Some("--check") => launch.check = true,
+            Some("--check-scale") => {
+                let value = unicode(args.next().ok_or("--check-scale needs a factor")?)?;
+                let scale = value
+                    .parse::<f32>()
+                    .ok()
+                    .filter(|scale| (1.0..=4.0).contains(scale))
+                    .ok_or("--check-scale must be a finite number from 1 to 4")?;
+                launch.check_scale = Some(scale);
+            }
             Some("--config") => {
                 launch.config = Some(args.next().ok_or("--config needs a path")?.into())
             }
@@ -58,6 +68,9 @@ pub fn parse(args: impl IntoIterator<Item = OsString>) -> Result<Action, String>
                 ))
             }
         }
+    }
+    if launch.check_scale.is_some() && !launch.check {
+        return Err("--check-scale requires --check".into());
     }
     if launch.check
         && (launch.config.is_some()
@@ -208,5 +221,39 @@ mod tests {
             Action::Run(Launch { check: true, .. })
         ));
         assert!(parse(args(&["--check", "--profile", "PowerShell"])).is_err());
+    }
+
+    #[test]
+    fn runtime_check_accepts_explicit_rendering_scales() {
+        for (scale, expected) in [
+            ("1", 1.0),
+            ("1.25", 1.25),
+            ("1.5", 1.5),
+            ("2", 2.0),
+            ("4", 4.0),
+        ] {
+            let Action::Run(launch) = parse(args(&["--check", "--check-scale", scale])).unwrap()
+            else {
+                panic!("Expected runtime check")
+            };
+            assert!(launch.check);
+            assert_eq!(launch.check_scale, Some(expected));
+        }
+    }
+
+    #[test]
+    fn runtime_scale_rejects_invalid_values_and_normal_launches() {
+        for values in [
+            vec!["--check", "--check-scale"],
+            vec!["--check", "--check-scale", "NaN"],
+            vec!["--check", "--check-scale", "inf"],
+            vec!["--check", "--check-scale", "0.75"],
+            vec!["--check", "--check-scale", "4.01"],
+            vec!["--check", "--check-scale", "1,25"],
+            vec!["--check-scale", "1.25"],
+            vec!["--check", "--check-scale", "1.25", "-e", "tool"],
+        ] {
+            assert!(parse(args(&values)).is_err(), "Accepted {values:?}");
+        }
     }
 }

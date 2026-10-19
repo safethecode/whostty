@@ -38,4 +38,14 @@ fn cli_help_version_and_errors_work_without_a_window_or_console_dialog() {
     assert_eq!(output.status.code(), Some(2));
     assert!(String::from_utf8_lossy(&output.stderr).contains("Unknown option"));
     assert!(output.stdout.is_empty());
+    for args in [
+        vec!["--check-scale", "1.25"],
+        vec!["--check", "--check-scale", "NaN"],
+        vec!["--check", "--check-scale", "4.01"],
+    ] {
+        let output = run(&args);
+        assert_eq!(output.status.code(), Some(2));
+        assert!(String::from_utf8_lossy(&output.stderr).contains("--check-scale"));
+        assert!(output.stdout.is_empty());
+    }
 }
