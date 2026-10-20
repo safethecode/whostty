@@ -12,9 +12,9 @@ Ghostty의 주요 방향인 네이티브 UX, 탭·분할, 글자 처리, 다양�
 
 | 영역 | 현재 근거 | 남은 검증 또는 구현 |
 |---|---|---|
-| 셸·세션 | Windows ConPTY / Mac PTY 통합 테스트, 독립 패널, 비동기 종료 | Windows 장시간 실행·대량 출력·WSL 프로세스 트리 종료 |
+| 셸·세션 | Windows ConPTY / Mac PTY 통합 테스트, 독립 패널, 비동기 종료, Windows 지속 출력 검사 도구 | 수시간·일상 부하 안정성, WSL 프로세스 트리 종료 |
 | VT·TUI | Alacritty 엔진, ANSI/대체 화면/스크롤백, 키·마우스 회귀 테스트 | 실제 vim/neovim/less/tmux/PowerShell 편집과 앱별 회귀 자료 |
-| 입력 | 기본 키, bracketed paste, IME 조합 보류, AltGr 문자 전달 | Windows 한국어 IME·AltGr 실기기, 고급 키보드 프로토콜 |
+| 입력 | 기본 키, bracketed paste, Windows 한국어 IME 조합·수정·취소·한자·영문 전환 실조작, 후보창 위치 수정 | AltGr 실기기, 다른 IME·TUI 조합, 고급 키보드 프로토콜 |
 | 렌더링 | wgpu, 셀 스냅샷, 스타일 face·장식·LTR OpenType shaping/ligature/mark·glyph atlas·fallback | RTL/bidi, 색상 emoji, script별 복합 문자·DPI 실사용, GPU 성능 측정 |
 | 검색 | 백그라운드 취소·revision 검사·결합 부호/soft wrap 매칭 | 긴 단일 논리 행의 256 KiB 제한, Windows 실사용 |
 | 사용성 | 탭·중첩 분할·프로필·안전한 설정 저장·실행 옵션·웹 링크·테마·로컬 CWD 계승·키 바인딩 | 명령 탐색, WSL/SSH 경로 계승 |
@@ -62,5 +62,17 @@ DirectX 12 100·125·150·200%에서 모두 `input_roundtrip`, `native_renderer`
 이 장비의 실제 모니터 배율은 100%이며, 위 배율 검사는 egui 렌더링 배율 오버라이드다.
 Vulkan 100·125·150·200%를 순환하는 연속 20회 재실행도 모두 통과했다. 이는 짧은 시작/종료 반복 검사다.
 
-이 결과는 실제 IME 후보창, 모니터 간 DPI 전환, 이모지 표시 품질, WSL/TUI 조작,
+위 PR #23의 자동 진단 결과는 실제 IME 후보창, 모니터 간 DPI 전환, 이모지 표시 품질, WSL/TUI 조작,
 장시간 안정성 또는 입력 지연·GPU 프레임 성능 측정의 완료를 뜻하지 않는다.
+
+## 실제 IME·지속 출력·입력 경로 측정
+
+[PR #24](https://github.com/safethecode/whostty/pull/24)에서 한국어 OS IME를 실제 키 이벤트로
+조작하고 PTY의 리터럴 수신 로그와 화면을 함께 확인했다. 한자 후보창이 패널 오른쪽 아래로
+밀리는 문제를 발견해 커서 셀을 기준으로 배치하도록 고쳤다. 수정 ZIP에서 화면 상단·하단의
+후보창, 한글 확정·Backspace·Escape·한자 확정·한/영 전환을 다시 확인했다.
+
+소스 `b178e40`은 Rust Windows 72개·macOS 70개, fmt/Clippy 및 Windows 배포 CI를 통과했다.
+네이티브 SendInput→PTY 수신, PTY 쓰기→GPU readback과 지속 출력의 조건·수치·한계는
+[2026-10-20 실기기 기록](windows-validation-2026-10-20.md)에 둔다. 이 측정은 물리 키보드→화면
+발광, 순수 GPU 프레임 시간, 수시간·수일의 일상 안정성을 보장하지 않는다.

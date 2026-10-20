@@ -30,7 +30,7 @@ cargo run --release --locked -p whostty-core --example terminal_bench
 
 위 초기 기준값은 Alacritty 검색 엔진을 UI 스레드에서 호출하던 구현의 결과다.
 후속 구현은 취소 가능한 백그라운드 검색으로 바꾸고, 16행씩 그리드를 복사한 뒤 잠금 밖에서 검색한다.
-Windows PC 측정값은 아직 없다.
+아래 Mac 기준값과 별도로 Windows 실기기의 입력 경로는 [2026-10-20 검증 기록](windows-validation-2026-10-20.md)에 있다.
 
 ## 백그라운드 검색 도입 후 추가 측정
 
