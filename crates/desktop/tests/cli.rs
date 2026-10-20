@@ -42,10 +42,13 @@ fn cli_help_version_and_errors_work_without_a_window_or_console_dialog() {
         vec!["--check-scale", "1.25"],
         vec!["--check", "--check-scale", "NaN"],
         vec!["--check", "--check-scale", "4.01"],
+        vec!["--check-latency", "10"],
+        vec!["--check", "--check-latency", "9"],
+        vec!["--check", "--check-latency", "2001"],
     ] {
         let output = run(&args);
         assert_eq!(output.status.code(), Some(2));
-        assert!(String::from_utf8_lossy(&output.stderr).contains("--check-scale"));
+        assert!(String::from_utf8_lossy(&output.stderr).contains("--check-"));
         assert!(output.stdout.is_empty());
     }
 }

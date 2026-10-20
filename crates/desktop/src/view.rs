@@ -71,6 +71,12 @@ pub struct Options<'a> {
     pub search: Option<&'a whostty_core::search::Search>,
 }
 
+fn ime_anchor(viewport: Rect, cursor: Rect) -> Rect {
+    let size = cursor.size().min(viewport.size());
+    let max = (viewport.max - size).max(viewport.min);
+    Rect::from_min_size(cursor.min.clamp(viewport.min, max), size)
+}
+
 pub fn show(
     ui: &mut egui::Ui,
     session: &mut Session,
@@ -641,8 +647,15 @@ pub fn show(
         }
     }
     if response.has_focus() {
-        ui.ctx()
-            .output_mut(|output| output.ime = Some(egui::output::IMEOutput { rect, cursor_rect }));
+        // egui-winit 0.31 uses IMEOutput.rect as the native exclusion area. The
+        // editable terminal input is at the caret, not the entire pane: a pane
+        // rect anchors the Windows candidate window at its bottom-right corner.
+        ui.ctx().output_mut(|output| {
+            output.ime = Some(egui::output::IMEOutput {
+                rect: ime_anchor(rect, cursor_rect),
+                cursor_rect,
+            });
+        });
         if !composition.is_empty() {
             let pos = cursor_rect.min;
             let galley = painter.layout_no_wrap(composition.into(), font, foreground);
@@ -751,6 +764,113 @@ fn mouse_report(
 mod tests {
     use super::*;
     use whostty_core::alacritty_terminal::vte::ansi::Color;
+
+    #[test]
+    fn ime_candidate_anchor_tracks_the_caret_and_stays_inside_the_pane() {
+        let pane = Rect::from_min_max(Pos2::new(100.0, 50.0), Pos2::new(700.0, 450.0));
+        for (cursor, expected) in [
+            (
+                Rect::from_min_size(pane.min, Vec2::new(12.0, 21.0)),
+                Rect::from_min_size(pane.min, Vec2::new(12.0, 21.0)),
+            ),
+            (
+                Rect::from_min_size(Pos2::new(148.0, 113.0), Vec2::new(12.0, 21.0)),
+                Rect::from_min_max(Pos2::new(148.0, 113.0), Pos2::new(160.0, 134.0)),
+            ),
+            (
+                Rect::from_min_size(Pos2::new(698.0, 500.0), Vec2::new(24.0, 21.0)),
+                Rect::from_min_max(Pos2::new(676.0, 429.0), Pos2::new(700.0, 450.0)),
+            ),
+            (
+                Rect::from_min_size(Pos2::new(80.0, 10.0), Vec2::new(12.0, 21.0)),
+                Rect::from_min_max(Pos2::new(100.0, 50.0), Pos2::new(112.0, 71.0)),
+            ),
+        ] {
+            assert_eq!(ime_anchor(pane, cursor), expected);
+        }
+        let tiny = Rect::from_min_size(Pos2::new(100.0, 50.0), Vec2::new(5.0, 6.0));
+        assert_eq!(
+            ime_anchor(tiny, Rect::from_min_size(tiny.min, Vec2::new(12.0, 21.0))),
+            tiny
+        );
+    }
+
+    #[test]
+    fn focused_terminal_exports_a_caret_sized_native_ime_area() {
+        use std::{
+            sync::Arc,
+            time::{Duration, Instant},
+        };
+        use whostty_core::config::Profile;
+        #[cfg(windows)]
+        let profile = Profile::new(
+            "ime-area",
+            "powershell.exe",
+            &[
+                "-NoLogo",
+                "-NoProfile",
+                "-Command",
+                "[Console]::Write('ime-area-ready'); exit 0",
+            ],
+        );
+        #[cfg(not(windows))]
+        let profile = Profile::new("ime-area", "/bin/sh", &["-c", "printf ime-area-ready"]);
+        let mut session =
+            Session::spawn(&profile, Size::new(80, 24), 100, Arc::new(|| {})).unwrap();
+        let deadline = Instant::now() + Duration::from_secs(15);
+        while !session
+            .terminal
+            .lock()
+            .unwrap()
+            .text()
+            .contains("ime-area-ready")
+        {
+            assert!(Instant::now() < deadline, "IME area fixture did not start");
+            std::thread::sleep(Duration::from_millis(20));
+        }
+        let ctx = egui::Context::default();
+        let mut state = ViewState::default();
+        let output = ctx.run(
+            egui::RawInput {
+                screen_rect: Some(Rect::from_min_size(Pos2::ZERO, Vec2::new(800.0, 500.0))),
+                ..Default::default()
+            },
+            |ctx| {
+                egui::CentralPanel::default().show(ctx, |ui| {
+                    show(
+                        ui,
+                        &mut session,
+                        &mut state,
+                        Options {
+                            font_size: 20.0,
+                            composition: "한",
+                            focus: true,
+                            theme: &whostty_core::theme::Palette::default(),
+                            search: None,
+                        },
+                    );
+                });
+            },
+        );
+        let ime = output
+            .platform_output
+            .ime
+            .expect("Focused terminal must allow native IME");
+        assert!(
+            ime.rect.width() <= 40.0 && ime.rect.height() <= 40.0,
+            "Native IME received pane bounds: {:?}",
+            ime.rect
+        );
+        assert!(ime.rect.contains(ime.cursor_rect.center()));
+        // Native output and the first view resize may still update the fixture's
+        // cursor after its readiness marker. Compare the area with the caret
+        // actually painted in this snapshot; a valid caret may be at the origin.
+        // Specific moved/clamped positions are covered by the pure geometry test.
+        assert_eq!(
+            ime.rect, ime.cursor_rect,
+            "Native IME must use the current rendered caret, not pane bounds"
+        );
+    }
 
     #[test]
     fn xterm_palette_and_sgr_mouse_release() {

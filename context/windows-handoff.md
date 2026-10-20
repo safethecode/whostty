@@ -6,7 +6,8 @@ Whostty는 Ghostty 소스 포크가 아닌 독립 Rust 터미널이다. Windows�
 Alacritty가 VT 상태를 처리하며, eframe/wgpu가 네이티브 창에 그린다. Electron·브라우저 런타임은 없다.
 
 개발은 macOS에서 진행했다. 실제 셸 PTY 테스트와 Mac 네이티브 창 테스트를 수행했고,
-Windows GitHub Actions에서 컴파일·PTY 통합 테스트를 수행한다. **Windows 데스크톱에서의 실제 조작은 아직 검증하지 않았다.**
+Windows GitHub Actions에서 컴파일·PTY 통합 테스트를 수행한다. Windows 11 실기기의 한국어 IME 조작,
+지속 출력 및 입력 경로 지연도 검사한다. 범위와 결과는 [실기기 기록](windows-validation-2026-10-20.md)에 남긴다.
 Ghostty와의 성능·호환성 동등성은 검증하지 않았다.
 
 ## 실행 파일 받기
@@ -65,6 +66,37 @@ cargo run --locked --package whostty
 생략하면 모니터의 기본 배율을 사용한다. 지정하면 egui의 렌더링 배율을 설정하고, 요청한 값과 실제 값이
 일치하지 않으면 검사를 실패시킨다. `pixels_per_point`와 `native_pixels_per_point`를 따로 기록한다.
 이 검사는 기본 프로필·사용자 글꼴·IME 후보창·모니터 간 DPI 전환이나 전체 GUI 기능을 검사하는 모드는 아니다.
+
+`--check-latency COUNT`도 `--check`와 함께만 사용하며 10–2000개 표본을 받는다. 먼저 20회 warmup을
+제외한 뒤, `Session::write` 직전부터 셸/PTY 응답을 GUI가 관측할 때와 해당 응답의 교대 색상 glyph를
+GPU screenshot으로 회수할 때까지 각각 기록한다. 토큰은 터미널 텍스트, screenshot은 색상 픽셀로
+검증하며 문자 인식은 하지 않는다. JSON의 `latency`에는 nearest-rank p50/p95/p99와
+최소·최대값, 실제 표본 수가 들어간다. 셸·스케줄링·GPU readback 비용을 포함한다.
+물리 키보드→화면 발광이나 순수 GPU 프레임 시간으로 해석하지 않는다.
+
+```powershell
+$env:WGPU_BACKEND = 'dx12' # 또는 'vulkan'
+.\whostty.exe --check --check-scale 1.0 --check-latency 200 | Out-File -Encoding utf8 latency.json
+# PowerShell 7의 배포본 검증 래퍼:
+./scripts/check-windows-runtime.ps1 -Executable .\whostty.exe -Scale 1.0 -LatencySamples 200
+```
+
+성능 비교에는 같은 PC·백엔드·배율·빌드를 사용하고 여러 번 실행한다. CI의 10표본 검사는
+프로토콜·실제 GPU readback·표본 수의 정확성을 확인하며 시간 임계값으로 성패를 정하지 않는다.
+자동화에서 GUI 실행 파일의 종료 코드와 완료를 확인할 때는 위 래퍼의 명시적인 프로세스 대기를 사용한다.
+
+일반 GUI의 30분 출력 검사는 Python 3.9 이상으로 실행한다. 임시 설정과 전용 자식 프로세스를 만들며
+사용자 설정은 건드리지 않는다. 기본 초당 600줄에 ANSI·한글·CJK·결합 문자·이모지를 섞고
+10초마다 일반/대체 화면을 전환한다.
+
+```powershell
+python scripts/windows-soak.py --exe C:\path\whostty.exe --duration 1800 --output C:\temp\whostty-soak-new
+```
+
+`--output`은 새 디렉터리여야 한다. `report.json`의 `completed`, 자식 실제 종료 코드, 진행 정지,
+메모리 추세·CPU·핸들을 확인하고 `samples.jsonl`을 보관한다. 성공하면 검사 창을 남긴다.
+`stop` 파일을 만들면 조기 종료하며 성공한 전체 시간 검사로 세지 않는다. 출력 진행과 OS 자원은
+대리 지표이므로 화면의 모든 글자가 정확히 표시되거나 메모리 누수가 없음을 보장하지 않는다.
 
 소스 체크아웃에서 동일한 배포본을 배율별로 검사하려면 PowerShell 7에서 실행한다:
 
@@ -218,7 +250,8 @@ LTR 텍스트는 Rustybuzz로 OpenType ligature/mark 위치를 계산하고 glyp
 RTL/bidi, bitmap/color/SVG glyph, 과도하게 긴 run 및 atlas가 찬 pass에서는 기존 셀 렌더러를 사용한다.
 전체 복합 문자·emoji 호환성을 달성했다는 뜻은 아니다. 기존 fallback은 표시할 때 NFC 정규화를 유지한다.
 ANSI·대체 화면 엔진 지원과 각 TUI의 전체 호환성은 구분한다. macOS의 파서·검색·셀 복사 기준값은
-`context/performance.md`에 기록했다. Windows 실기기의 입력 지연·GPU 프레임 시간은 아직 측정하지 않았다.
+`context/performance.md`에 기록했다. Windows 입력 경로 측정도 같은 문서에서 연결하며,
+물리 입력→화면 발광 및 순수 GPU 프레임 시간은 별도 측정 대상이다.
 
 분할 창은 탭당 최대 8개를 지원한다. Ctrl+F로 활성 패널의 스크롤백을 검색하고 F3/Shift+F3 또는
 Enter/Shift+Enter로 결과를 이동한다. 대소문자 구분과 정규식을 선택할 수 있고 Escape로 검색을 닫는다.
