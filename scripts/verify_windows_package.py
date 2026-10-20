@@ -6,12 +6,15 @@ import sys
 import zipfile
 from pathlib import Path
 
+from prepare_conpty_runtime import CONTEXT, RUNTIME_HASHES, VERSION
+
 
 def verify(path: Path) -> None:
     expected = path.with_suffix(".zip.sha256").read_text().split()[0]
     assert hashlib.sha256(path.read_bytes()).hexdigest() == expected, "ZIP checksum mismatch"
     with zipfile.ZipFile(path) as package:
-        assert sorted(package.namelist()) == ["EMBEDDED_FONT_LICENSES.txt", "LICENSE", "THIRD_PARTY_LICENSES.html", "whostty.exe"]
+        expected_files = ["CONPTY_LICENSES.txt", "EMBEDDED_FONT_LICENSES.txt", "LICENSE", "THIRD_PARTY_LICENSES.html", "whostty.exe", *RUNTIME_HASHES]
+        assert sorted(package.namelist()) == sorted(expected_files), "Missing or unexpected package files (including ConPTY runtime pair)"
         assert package.read("LICENSE").startswith(b"MIT License")
         notices = package.read("THIRD_PARTY_LICENSES.html")
         assert b"alacritty_terminal" in notices and b"portable-pty" in notices
@@ -21,8 +24,20 @@ def verify(path: Path) -> None:
         for font in ("Hack-Regular.ttf", "NotoEmoji-Regular.ttf", "Ubuntu-Light.ttf", "emoji-icon-font.ttf"):
             assert font in fonts, f"Missing embedded font: {font}"
         assert fonts.count("SHA256:") == 4, "Expected hashes for the four embedded fonts"
+        conpty_notices = package.read("CONPTY_LICENSES.txt").decode("utf-8")
+        assert f"Microsoft.Windows.Console.ConPTY {VERSION}" in conpty_notices
+        for notice in ("conpty-LICENSE.txt", "conpty-NOTICE.txt"):
+            assert (CONTEXT / notice).read_text(encoding="utf-8") in conpty_notices, f"Missing {notice}"
+        for name, digest in RUNTIME_HASHES.items():
+            data = package.read(name)
+            assert hashlib.sha256(data).hexdigest() == digest, f"ConPTY runtime checksum mismatch: {name}"
+            verify_pe(data)
         exe = package.read("whostty.exe")
+    verify_pe(exe, gui=True, dpi=True)
+    print("Verified ZIP checksum, dependency/font/ConPTY notices, matched x64 ConPTY runtime, GUI executable, DPI manifest, and static VC++ runtime.")
 
+
+def verify_pe(exe: bytes, *, gui: bool = False, dpi: bool = False) -> None:
     assert exe[:2] == b"MZ", "Missing DOS header"
     pe = struct.unpack_from("<I", exe, 60)[0]
     assert exe[pe:pe + 4] == b"PE\0\0", "Missing PE header"
@@ -31,8 +46,10 @@ def verify(path: Path) -> None:
     optional = pe + 24
     assert machine == 0x8664, "Expected Windows x64"
     assert struct.unpack_from("<H", exe, optional)[0] == 0x20B, "Expected PE32+"
-    assert struct.unpack_from("<H", exe, optional + 68)[0] == 2, "Expected GUI subsystem"
-    assert b"PerMonitorV2" in exe, "DPI manifest is missing"
+    if gui:
+        assert struct.unpack_from("<H", exe, optional + 68)[0] == 2, "Expected GUI subsystem"
+    if dpi:
+        assert b"PerMonitorV2" in exe, "DPI manifest is missing"
     sections = optional + optional_size
 
     def offset(rva: int) -> int:
@@ -50,7 +67,6 @@ def verify(path: Path) -> None:
         descriptor += 20
     external_crt = [name for name in libraries if name.startswith(("vcruntime", "msvcp", "msvcr"))]
     assert not external_crt, f"Portable package depends on VC++ redistributable: {external_crt}"
-    print("Verified ZIP checksum, dependency/font notices, x64 GUI executable, DPI manifest, and static VC++ runtime.")
 
 
 if __name__ == "__main__":

@@ -34,9 +34,9 @@ jobs:
           Expand-Archive -LiteralPath dist/whostty-windows-x64.zip -DestinationPath $runtimeDirectory -Force
           foreach ($scale in @(1.0, 1.25, 1.5, 2.0)) {
             $percent = [int]($scale * 100)
-            ./scripts/check-windows-runtime.ps1 -Executable (Join-Path $runtimeDirectory 'whostty.exe') -Scale $scale -ReportPath "dist/whostty-runtime-check-$percent.json"
+            ./scripts/check-windows-runtime.ps1 -Executable (Join-Path $runtimeDirectory 'whostty.exe') -RequireBundledConpty -Scale $scale -ReportPath "dist/whostty-runtime-check-$percent.json"
           }
-          ./scripts/check-windows-runtime.ps1 -Executable (Join-Path $runtimeDirectory 'whostty.exe') -Scale 1.25 -LatencySamples 10 -ReportPath dist/whostty-input-latency-smoke.json
+          ./scripts/check-windows-runtime.ps1 -Executable (Join-Path $runtimeDirectory 'whostty.exe') -RequireBundledConpty -Scale 1.25 -LatencySamples 10 -ReportPath dist/whostty-input-latency-smoke.json
       - uses: actions/upload-artifact@v4
         with:
           name: whostty-windows-x64

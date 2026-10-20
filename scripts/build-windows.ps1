@@ -17,6 +17,8 @@ try {
     $PackagePath = Join-Path $ProjectRoot 'dist/whostty-windows-x64'
     New-Item -ItemType Directory -Force -Path $PackagePath | Out-Null
     Copy-Item "target/$Target/release/whostty.exe" $PackagePath -Force
+    & python scripts/prepare_conpty_runtime.py $PackagePath
+    if ($LASTEXITCODE -ne 0) { throw 'ConPTY runtime staging failed.' }
     Copy-Item 'context/LICENSE' $PackagePath -Force
     & cargo about generate --locked -o "$PackagePath/THIRD_PARTY_LICENSES.html" context/third-party-licenses.hbs
     if ($LASTEXITCODE -ne 0) { throw 'License notice generation failed. Install cargo-about 0.9.2 with the cli feature.' }
