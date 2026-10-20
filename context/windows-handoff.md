@@ -14,8 +14,11 @@ Ghostty와의 성능·호환성 동등성은 검증하지 않았다.
 
 GitHub Actions의 **Windows package** 워크플로에서 main의 성공한 실행을 열고
 `whostty-windows-x64` 아티팩트를 다운로드한다. 아티팩트 안의 `whostty-windows-x64.zip`을 다시 풀고
-`whostty.exe`를 실행한다. ZIP에는 Whostty MIT 라이선스, 의존성 라이선스 HTML, 기본 내장 폰트 4개의 원문 고지·메타데이터를 모은 EMBEDDED_FONT_LICENSES.txt가 동봉된다.
-코드 서명과 자동 업데이트는 아직 없다. 대상은 Windows x64이며 ARM64 패키지는 만들지 않는다.
+`whostty.exe`를 실행한다. `conpty.dll`과 `OpenConsole.exe`도 같은 폴더에 둔다.
+기본 Windows 콘솔 호스트의 결합 문자 폭 불일치로 Neovim 첫 화면이 밀리는 문제를 피하도록
+Microsoft ConPTY 1.24.261001001의 검증한 x64 런타임 쌍을 포함한다.
+ZIP에는 Whostty MIT 라이선스, 의존성 라이선스 HTML, 기본 내장 폰트 4개의 원문 고지·메타데이터를 모은 EMBEDDED_FONT_LICENSES.txt와 Microsoft의 CONPTY_LICENSES.txt가 동봉된다.
+Whostty 코드 서명과 자동 업데이트는 아직 없다. 대상은 네이티브 Windows AMD64이며 ARM64·x64 에뮬레이션은 검증하지 않았다.
 아티팩트 보존 기간은 14일이다. 만료되면 워크플로의 Run workflow로 main에서 새로 빌드한다.
 Windows package는 ZIP의 실행 파일을 꺼내 `--check`로 네이티브 PTY의 한글·결합 문자·이모지 입력 왕복,
 shaped glyph 경로·화면 GPU readback을 검사한다. 100·125·150·200% 렌더링 배율별 결과 JSON도 아티팩트에 포함한다.
@@ -38,8 +41,14 @@ Get-FileHash .\whostty-windows-x64.zip -Algorithm SHA256
 git clone https://github.com/safethecode/Whostty.git
 cd Whostty
 git switch main
+python scripts/prepare_conpty_runtime.py target/debug
 cargo run --locked --package whostty
 ```
+
+개발 실행도 exe 옆의 ConPTY 런타임 쌍을 사용한다. 다른 target/profile을 쓰면 해당 실행 파일 폴더에
+같은 helper로 배치한다. DLL이 없으면 portable-pty는 OS ConPTY로 돌아가므로 구형 콘솔 호스트에서
+결합 문자 문제가 다시 나타날 수 있다. `scripts/build-windows.ps1`은 배포 폴더에 자동으로 배치하고
+ZIP 검사는 archive·두 바이너리의 고정 SHA256, x64 PE와 외부 VC++ runtime 의존성·고지를 확인한다.
 
 특정 디렉터리·프로필로 시작하거나 프로그램을 직접 실행할 수 있다:
 
