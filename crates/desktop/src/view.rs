@@ -1,3 +1,5 @@
+use std::sync::{Arc, Mutex};
+
 use eframe::egui::{self, Color32, FontId, Pos2, Rect, Response, Sense, Stroke, Vec2};
 use unicode_normalization::UnicodeNormalization;
 use whostty_core::{
@@ -14,7 +16,7 @@ use whostty_core::{
         vte::ansi::{CursorShape, NamedColor, Rgb},
     },
     session::Session,
-    terminal::Size,
+    terminal::{Size, Terminal},
 };
 
 pub const BACKGROUND: Color32 = Color32::from_rgb(19, 23, 28);
@@ -83,6 +85,18 @@ pub fn show(
     state: &mut ViewState,
     options: Options<'_>,
 ) -> View {
+    show_terminal(ui, state, options, |size| {
+        let error = session.resize(size).err().map(|error| format!("{error:#}"));
+        (session.terminal.clone(), error)
+    })
+}
+
+fn show_terminal<T: EventListener>(
+    ui: &mut egui::Ui,
+    state: &mut ViewState,
+    options: Options<'_>,
+    prepare: impl FnOnce(Size) -> (Arc<Mutex<Terminal<T>>>, Option<String>),
+) -> View {
     let Options {
         font_size,
         composition,
@@ -117,10 +131,10 @@ pub fn show(
         (rect.width() / cell.x) as usize,
         (rect.height() / cell.y) as usize,
     );
-    let error = session.resize(size).err().map(|error| format!("{error:#}"));
+    // Resize before locking the grid: ConPTY may need its reader to drain output.
+    let (terminal_arc, error) = prepare(size);
     let mut input = Vec::new();
     let mut open_url = None;
-    let terminal_arc = session.terminal.clone();
     let mut terminal = terminal_arc
         .lock()
         .unwrap_or_else(|error| error.into_inner());
@@ -948,43 +962,23 @@ mod tests {
 
     #[test]
     fn tui_drag_captures_secondary_button_and_release_outside_the_pane() {
-        use std::{
-            sync::Arc,
-            time::{Duration, Instant},
-        };
-        use whostty_core::config::Profile;
-        #[cfg(windows)]
-        let profile = Profile::new(
-            "mouse",
-            "powershell.exe",
-            &[
-                "-NoLogo",
-                "-NoProfile",
-                "-Command",
-                "[Console]::Write('mouse-ready'); Start-Sleep 60",
-            ],
-        );
-        #[cfg(not(windows))]
-        let profile = Profile::new("mouse", "/bin/sh", &["-c", "printf mouse-ready; sleep 60"]);
-        let mut session =
-            Session::spawn(&profile, Size::new(40, 10), 100, Arc::new(|| {})).unwrap();
-        let deadline = Instant::now() + Duration::from_secs(15);
-        while !session
-            .terminal
-            .lock()
-            .unwrap()
-            .text()
-            .contains("mouse-ready")
-        {
-            assert!(Instant::now() < deadline);
-            std::thread::sleep(Duration::from_millis(20));
+        // Exercise fresh grids/contexts repeatedly: this fixture used to race
+        // native PTY repaint output and fail intermittently on Windows CI.
+        for _ in 0..20 {
+            assert_tui_mouse_gestures();
         }
-        session
-            .terminal
-            .lock()
-            .unwrap()
-            .feed(b"\x1b[?1002h\x1b[?1006h");
-        let terminal = session.terminal.clone();
+    }
+
+    fn assert_tui_mouse_gestures() {
+        use whostty_core::alacritty_terminal::event::VoidListener;
+        // The mouse/link/wheel assertions seed VT state directly. A live PTY can
+        // asynchronously repaint that state after resize, invalidating the fixture.
+        let terminal = Arc::new(Mutex::new(Terminal::new(
+            Size::new(40, 10),
+            100,
+            VoidListener,
+        )));
+        terminal.lock().unwrap().feed(b"\x1b[?1002h\x1b[?1006h");
         let ctx = egui::Context::default();
         let mut state = ViewState::default();
         let mut opened = Vec::new();
@@ -1002,9 +996,8 @@ mod tests {
                             egui::UiBuilder::new()
                                 .max_rect(Rect::from_min_size(Pos2::ZERO, Vec2::new(250.0, 180.0))),
                             |ui| {
-                                let view = show(
+                                let view = show_terminal(
                                     ui,
-                                    &mut session,
                                     &mut state,
                                     Options {
                                         font_size: 15.0,
@@ -1012,6 +1005,10 @@ mod tests {
                                         focus: false,
                                         theme: &whostty_core::theme::Palette::default(),
                                         search: None,
+                                    },
+                                    |size| {
+                                        terminal.lock().unwrap().resize(size);
+                                        (terminal.clone(), None)
                                     },
                                 );
                                 reports.extend(view.input);

@@ -72,3 +72,15 @@ Ubuntu `--no-launch`로만 진행하는 스크립트를 준비했다. 관리자 
 - [동일 릴리스 v1.24.12741.0](https://github.com/microsoft/terminal/releases/tag/v1.24.12741.0)
 - [Microsoft combining 문자 폭 변경](https://learn.microsoft.com/en-us/windows/console/console-potential-breaking-changes)
 - [portable-pty 0.9.0의 ConPTY 로더](https://docs.rs/crate/portable-pty/0.9.0/source/src/win/psuedocon.rs)
+
+## CI 검사 fixture 경쟁 제거
+
+`79ae067` Windows CI의 기존 `tui_drag_captures_secondary_button_and_release_outside_the_pane`이 링크 열기 결과
+`[]` 대 `https://example.com/`로 실패했다. 같은 Rust 소스의 `2c172e5`는 통과했다. 테스트는 직접 VT 상태를
+주입하는 동시에 live ConPTY reader가 같은 그리드를 바꾸도록 만들어 resize 재그리기와 경쟁할 수 있었다.
+정확히 덮어쓴 native VT 시퀀스는 수집하지 못했으므로 실패의 전체 인과를 확정하지 않는다.
+
+Session-specific resize/terminal 획득을 작은 wrapper에 두고 실제 view 로직은 private generic 함수로 분리했다.
+마우스·링크·휠 검사는 독립 `Terminal<VoidListener>`를 사용해 native writer 경쟁을 제거한다.
+생산 경로는 같은 위치에서 한 번 resize한 후 lock하며 오류 전달을 보존한다. 기존 전체 gesture 검사를
+매번 새 Context·그리드로 20회 반복한다. 변경 전 실패는 위 CI에, 변경 후 Windows/macOS 전체 검사는 PR 리뷰에 기록한다.
