@@ -186,3 +186,10 @@ EMBEDDED_FONT_LICENSES.txt를 ZIP에 포함한다. 별도 폰트 설치나 fontT
 폰트 목록 변경·원문 누락·잘못된 메타데이터는 패키징을 실패시키고, Windows/macOS CI와 ZIP 검증이 이를 검사한다.
 원문 출처: [Hack 고지](https://raw.githubusercontent.com/emilk/egui/0.31.1/crates/epaint_default_fonts/fonts/Hack-Regular.txt),
 [Ubuntu Font Licence](https://raw.githubusercontent.com/emilk/egui/0.31.1/crates/epaint_default_fonts/fonts/UFL.txt).
+
+## 2026-10-21 Windows TUI 후속 검증
+
+Windows 11에서 네이티브 Vim/Neovim의 한글 IME 편집·저장과 Vim 마우스·크기 변경을 확인했다.
+기본 OS ConPTY에서 Neovim 분해 결합 문자 행이 밀리는 문제는 같은 exe에 Microsoft ConPTY DLL/호스트 쌍을 추가해 해결했다.
+배포는 검증한 x64 런타임 쌍과 Microsoft 고지를 포함하며, archive·각 파일 해시와 PE·고지를 검사한다.
+[검증 기록](windows-tui-validation-2026-10-21.md)에 A/B 조건과 범위를 남긴다. WSL 설치는 관리자 승인 대기이며 재부팅하지 않는다.

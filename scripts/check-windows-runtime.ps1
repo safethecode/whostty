@@ -3,7 +3,8 @@ param(
     [Parameter(Mandatory = $true)][string]$Executable,
     [string]$ReportPath,
     [ValidateRange(1.0, 4.0)][float]$Scale = 1.0,
-    [ValidateRange(0, 2000)][int]$LatencySamples = 0
+    [ValidateRange(0, 2000)][int]$LatencySamples = 0,
+    [switch]$RequireBundledConpty
 )
 
 $ErrorActionPreference = 'Stop'
@@ -14,6 +15,12 @@ $nativeCheckProcess = $null
 try {
     $startInfo = [Diagnostics.ProcessStartInfo]::new()
     $startInfo.FileName = (Resolve-Path -LiteralPath $Executable).ProviderPath
+    $expectedConpty = Join-Path (Split-Path $startInfo.FileName -Parent) 'conpty.dll'
+    if ($RequireBundledConpty) {
+        foreach ($runtimeFile in @($expectedConpty, (Join-Path (Split-Path $startInfo.FileName -Parent) 'OpenConsole.exe'))) {
+            if (-not (Test-Path -LiteralPath $runtimeFile -PathType Leaf)) { throw "Bundled ConPTY runtime is missing: $runtimeFile" }
+        }
+    }
     $startInfo.ArgumentList.Add('--check')
     $startInfo.ArgumentList.Add('--check-scale')
     $startInfo.ArgumentList.Add($Scale.ToString('R', [Globalization.CultureInfo]::InvariantCulture))
@@ -33,7 +40,27 @@ try {
     $stdoutTask = $nativeCheckProcess.StandardOutput.ReadToEndAsync()
     $stderrTask = $nativeCheckProcess.StandardError.ReadToEndAsync()
     $timeoutMilliseconds = if ($LatencySamples) { 660000 } else { 60000 }
-    if (-not $nativeCheckProcess.WaitForExit($timeoutMilliseconds)) {
+    $runtimeWatch = [Diagnostics.Stopwatch]::StartNew()
+    $loadedBundledConpty = $false
+    while (-not $nativeCheckProcess.WaitForExit(50)) {
+        if ($RequireBundledConpty -and -not $loadedBundledConpty) {
+            try {
+                $nativeCheckProcess.Refresh()
+                foreach ($module in $nativeCheckProcess.Modules) {
+                    if ($module.ModuleName -ieq 'conpty.dll' -and $module.FileName -ieq $expectedConpty) {
+                        $loadedBundledConpty = $true
+                        break
+                    }
+                }
+            } catch [ComponentModel.Win32Exception] {
+                # Module enumeration can race process startup/exit; the bounded check retries.
+            } catch [InvalidOperationException] {
+                if (-not $nativeCheckProcess.HasExited) { throw }
+            }
+        }
+        if ($runtimeWatch.ElapsedMilliseconds -ge $timeoutMilliseconds) { break }
+    }
+    if (-not $nativeCheckProcess.HasExited) {
         $nativeCheckProcess.Kill($true)
         $nativeCheckProcess.WaitForExit()
         throw "Native runtime check exceeded $($timeoutMilliseconds / 1000) seconds"
@@ -41,6 +68,9 @@ try {
     $stdout = $stdoutTask.GetAwaiter().GetResult()
     $stderr = $stderrTask.GetAwaiter().GetResult()
     if ($nativeCheckProcess.ExitCode -ne 0) { throw "Native runtime check failed: $stderr $stdout" }
+    if ($RequireBundledConpty -and -not $loadedBundledConpty) {
+        throw "Native runtime check did not load the packaged ConPTY DLL: $expectedConpty"
+    }
     $runtimeReport = $stdout.Trim() | ConvertFrom-Json
     if (-not $runtimeReport.ok -or -not $runtimeReport.pty -or -not $runtimeReport.input_roundtrip -or -not $runtimeReport.native_renderer -or -not $runtimeReport.text_shaping -or $runtimeReport.colored_pixels -lt 20) {
         throw "Native runtime check did not verify the PTY and rendered pixels: $stdout"

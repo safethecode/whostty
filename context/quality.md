@@ -76,3 +76,10 @@ Vulkan 100·125·150·200%를 순환하는 연속 20회 재실행도 모두 통�
 네이티브 SendInput→PTY 수신, PTY 쓰기→GPU readback과 지속 출력의 조건·수치·한계는
 [2026-10-20 실기기 기록](windows-validation-2026-10-20.md)에 둔다. 이 측정은 물리 키보드→화면
 발광, 순수 GPU 프레임 시간, 수시간·수일의 일상 안정성을 보장하지 않는다.
+
+## Windows TUI·ConPTY 호환성
+
+네이티브 Neovim의 분해 결합 문자 첫 화면에서 행 밀림을 재현했고, 공식 Microsoft ConPTY 런타임 쌍을 배포해 해결했다.
+Vim/Neovim 안에서 한글 IME 편집·저장 원문, Vim 마우스·휠과 실행 중 크기 변경을 확인했다.
+배포 ZIP의 해시·고지뿐 아니라 실제 로드된 DLL 경로를 CI에서 검사해 OS 호스트로의 조용한 fallback을 막는다.
+[검증 범위와 근거](windows-tui-validation-2026-10-21.md)에 남긴다. WSL과 실제 다중 모니터 DPI·수시간 안정성은 남아 있다.

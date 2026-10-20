@@ -17,8 +17,10 @@
 
 ## Task 1: 검증한 런타임 쌍 배포
 
-- [ ] `scripts/test_conpty_runtime.py`: checksum mismatch와 누락된 pair를 먼저 실패로 확인한다. 정상 archive 추출도 검사한다.
-- [ ] `scripts/prepare_conpty_runtime.py`: 고정 archive hash, 명시한 두 member만 추출, 고지 생성. `scripts/build-windows.ps1`에 연결한다.
-- [ ] `scripts/verify_windows_package.py`: pair hash, x64 PE, 정적 VC++ runtime, 고지를 검사한다. 손상·누락 ZIP을 거부하는 검증을 실행한다.
-- [ ] Python 전체 테스트와 패키징 helper를 실제 공식 archive로 실행한다. Windows/macOS CI와 최종 ZIP native GPU·PTY 진단을 확인한다.
-- [ ] `context/`에 근거·검증 한계를 기록하고 커밋·PR·리뷰·머지 후 main CI와 새 브랜치를 확인한다.
+- [x] `scripts/test_conpty_runtime.py`: checksum mismatch와 누락된 pair를 먼저 실패로 확인한다. 정상 archive 추출도 검사한다.
+- [x] `scripts/prepare_conpty_runtime.py`: 고정 archive hash, 명시한 두 member만 추출, 고지 생성. `scripts/build-windows.ps1`에 연결한다.
+- [x] `scripts/verify_windows_package.py`: pair hash, x64 PE, 정적 VC++ runtime, 고지를 검사한다. 손상·누락 ZIP을 거부하는 검증을 실행한다.
+- [x] Python 전체 테스트와 패키징 helper를 실제 공식 archive로 실행한다. Windows/macOS CI와 최종 ZIP native GPU·PTY 진단을 확인한다.
+- [x] `context/`에 근거·검증 한계를 기록하고 커밋·PR을 만든다.
+
+통합 후 리뷰·머지·main CI·새 브랜치 결과는 [PR #25](https://github.com/safethecode/whostty/pull/25)에 기록한다.

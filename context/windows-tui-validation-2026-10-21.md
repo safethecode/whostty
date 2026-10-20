@@ -22,10 +22,39 @@ portable-pty 0.9.0의 기존 DLL 로더를 이용하므로 Rust 파서나 입력
 ## 실제 조작
 
 - 신형 런타임의 Neovim 첫 화면은 결합 문자 행·번호·상태줄이 정렬된다.
-- Neovim 삽입 모드에서 OS 한/영 전환과 `gksrmf` 물리 VK 입력으로 `한글`을 조합하고 space로 확정했다.
+- Neovim 삽입 모드에서 OS 한/영 전환과 `gksrmf`의 OS SendInput VK 입력으로 `한글`을 조합하고 space로 확정했다.
 - 저장 후 UTF-8 파일은 원래 160행에 `한글 ` 한 행만 추가된 161행이며, 기존 분해 결합 문자도 보존된다.
-- Vim의 한글·CJK·결합 문자가 섞인 첫 화면과 IME 조합·확정도 확인했다. 추가 조작 결과는 검증 종료 때 기록한다.
+- Vim의 한글·CJK·결합 문자가 섞인 첫 화면과 IME 조합·확정·저장도 확인했다. 저장 파일은 같은 한글 한 행만 추가되었고 기존 160행의 코드포인트는 모두 일치한다. 마우스 클릭으로 커서 이동, 휠로 46행 부근 이동, 최대화에 따른 117×26 → 202×38 그리드 변경과 VimResized 로그 및 정렬된 화면도 확인했다.
 - 증거는 git-ignored `dist/validation/tui-2026-10-20/`에 둔다. 스크린샷은 해당 fixture가 실제 foreground일 때만 증거로 사용한다.
+
+## 배포본 자동 검사
+
+소스 `2c172e5`의 [Windows 배포 CI](https://github.com/safethecode/whostty/actions/runs/39446506377) ZIP을 다시 받아
+체크섬·x64 PE·정적 CRT·모든 고지를 검증했다. 이 ZIP의 exe SHA256은
+`ac4f7a47fc3fca503d80a4108bd497fcac9a766d1c4d52c030aeb564c07c5906`이다.
+배포본에서 새 창과 새 탭 모두 Neovim 첫 화면의 연속 24행을 접근성 그리드 원문과 정확히 대조했다.
+로드된 DLL은 배포 폴더의 `conpty.dll`이었다.
+
+같은 ZIP에서 RTX 3080 Ti Vulkan·DX12 각각 100/125/150/200%의 native PTY UTF-8 왕복·shaped glyph·GPU readback
+8회를 통과했다. 실제 monitor native scale은 모두 1.0이었다. 이는 렌더링 배율 override 검사다.
+패키지 CI는 추가로 `-RequireBundledConpty`를 사용해 실제 child module 경로를 확인한다. DLL이 없으면 실행 전에,
+파일만 있고 로더가 OS ConPTY로 fallback하면 검사 후 실패한다. 잘못된 DLL을 둔 실제 실행으로 fallback 거부도 확인했다.
+누락 host·손상 DLL·누락 고지 ZIP은 outer checksum을 다시 계산해도 정적 검증에서 거부된다.
+
+Python 전체 12개 테스트와 actual archive staging을 통과했다. 리뷰에서 Python3.9 미지원 `Path.write_text(newline=...)`를
+발견해 `write_bytes`로 수정했다. [Rust CI](https://github.com/safethecode/whostty/actions/runs/39446506130)의
+Windows/macOS fmt·Clippy·테스트도 통과했다. 최종 wrapper 및 merge 이후의 상태는 [PR #25](https://github.com/safethecode/whostty/pull/25)에 기록한다.
+
+## 신형 런타임 지속 출력
+
+main cb2defe exe와 신형 ConPTY 쌍을 사용하는 일반 GUI를 초당 600줄로 600초 실행했다.
+fixture 360,000줄·source UTF-8/ANSI payload 44,640,694 bytes·일반/대체 화면 전환 59회,
+전체 관측 601.281초·602표본, 자식 exit0·앱 생존·completed=true였다.
+5초 진행 정지 0건, 최대 관측 진행 간격은 1.016초다. Native 편집·진단 검사를 같은 PC에서 병행했으므로 부하를 격리하지 않았다.
+
+warmup30초 제외 후 앞/뒤 60초 중앙값의 private bytes는 499.715 → 499.879 MiB(+0.164 MiB)였다.
+핸들 중앙값788·최대796·종료791, 스레드 중앙값38·최대44, CPU 중앙값20.3125%(논리 코어 하나=100%)다.
+진행·프로세스 자원은 대리 지표이며 10분 관측으로 누수 없음·수시간 안정성·매 프레임 정확성을 결론 내리지 않는다.
 
 ## 설치·검증 한계
 
