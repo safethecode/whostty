@@ -48,7 +48,7 @@ def stage_runtime(archive: bytes, destination: Path) -> None:
     destination.mkdir(parents=True, exist_ok=True)
     for name, data in files.items():
         (destination / name).write_bytes(data)
-    (destination / "CONPTY_LICENSES.txt").write_text(notices, encoding="utf-8", newline="\n")
+    (destination / "CONPTY_LICENSES.txt").write_bytes(notices.encode("utf-8"))
 
 
 if __name__ == "__main__":
