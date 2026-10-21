@@ -92,7 +92,7 @@ fn run(launch: launch::Launch) -> eframe::Result<Option<serde_json::Value>> {
     let check = launch.check;
     let output = check::Output::default();
     let result = output.clone();
-    let options = eframe::NativeOptions {
+    let mut options = eframe::NativeOptions {
         renderer: eframe::Renderer::Wgpu,
         viewport: eframe::egui::ViewportBuilder::default()
             .with_title(if check {
@@ -114,6 +114,7 @@ fn run(launch: launch::Launch) -> eframe::Result<Option<serde_json::Value>> {
             }),
         ..Default::default()
     };
+    memory::configure_gpu(&mut options);
     eframe::run_native(
         "Whostty",
         options,
