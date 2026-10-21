@@ -224,11 +224,15 @@ pub fn configure_fonts(ctx: &egui::Context, settings: &Settings) -> Option<Strin
     #[cfg(not(any(windows, target_os = "macos")))]
     let cjk: Vec<PathBuf> = Vec::new();
     for path in cjk {
-        if let Ok(bytes) = read_font(&path) {
-            if ttf_parser::Face::parse(&bytes, 0).is_ok() {
-                fonts
-                    .font_data
-                    .insert("terminal-cjk".into(), font_data(&bytes, 0).into());
+        let data = crate::font_collection::read(&path, 0).and_then(|extracted| {
+            extracted.map_or_else(
+                || read_font(&path).map(egui::FontData::from_owned),
+                |bytes| Ok(egui::FontData::from_owned(bytes)),
+            )
+        });
+        if let Ok(data) = data {
+            if ttf_parser::Face::parse(&data.font, data.index).is_ok() {
+                fonts.font_data.insert("terminal-cjk".into(), data.into());
                 for family in fonts.families.values_mut() {
                     family.push("terminal-cjk".into());
                 }

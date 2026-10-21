@@ -1,4 +1,4 @@
-//! Opt-in diagnostic accounting; GPU reservations and process private memory
+//! GPU memory controls and opt-in accounting; GPU reservations and process private memory
 //! are different accounting domains and must not be added together.
 use eframe::{egui, wgpu};
 use serde_json::{json, Value};
