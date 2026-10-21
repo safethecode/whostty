@@ -95,7 +95,9 @@ fn family_name(face: &ttf_parser::Face<'_>) -> Option<String> {
     None
 }
 
-fn font_data(bytes: Vec<u8>, index: u32) -> egui::FontData {
+fn font_data(bytes: &[u8], index: u32) -> egui::FontData {
+    let (bytes, index) = crate::font_collection::extract(bytes, index)
+        .map_or_else(|| (bytes.to_vec(), index), |bytes| (bytes, 0));
     egui::FontData {
         index,
         ..egui::FontData::from_owned(bytes)
@@ -104,14 +106,17 @@ fn font_data(bytes: Vec<u8>, index: u32) -> egui::FontData {
 
 fn read_font(path: &Path) -> std::io::Result<Vec<u8>> {
     const LIMIT: u64 = 64 * 1024 * 1024;
-    let mut bytes = Vec::new();
-    std::fs::File::open(path)?
-        .take(LIMIT + 1)
-        .read_to_end(&mut bytes)?;
+    let file = std::fs::File::open(path)?;
+    let length = file.metadata()?.len();
+    if length > LIMIT {
+        return Err(std::io::Error::other("Font files must be at most 64 MiB"));
+    }
+    let mut bytes = Vec::with_capacity(length as usize);
+    file.take(LIMIT + 1).read_to_end(&mut bytes)?;
     if bytes.len() as u64 > LIMIT {
         return Err(std::io::Error::other("Font files must be at most 64 MiB"));
     }
-    Ok(bytes)
+    Ok(bytes.into_boxed_slice().into_vec())
 }
 
 pub fn configure_fonts(ctx: &egui::Context, settings: &Settings) -> Option<String> {
@@ -141,7 +146,7 @@ pub fn configure_fonts(ctx: &egui::Context, settings: &Settings) -> Option<Strin
                     .and_then(|face| family_name(&face));
                 fonts
                     .font_data
-                    .insert(NAMES[0].into(), font_data(bytes.clone(), index).into());
+                    .insert(NAMES[0].into(), font_data(&bytes, index).into());
                 fonts
                     .families
                     .get_mut(&FontFamily::Monospace)
@@ -206,7 +211,7 @@ pub fn configure_fonts(ctx: &egui::Context, settings: &Settings) -> Option<Strin
         if let Some((bytes, index)) = face {
             fonts
                 .font_data
-                .insert(NAMES[style].into(), font_data(bytes, index).into());
+                .insert(NAMES[style].into(), font_data(&bytes, index).into());
             fallbacks.insert(0, NAMES[style].into());
             typography.native[style] = true;
         }
@@ -223,7 +228,7 @@ pub fn configure_fonts(ctx: &egui::Context, settings: &Settings) -> Option<Strin
             if ttf_parser::Face::parse(&bytes, 0).is_ok() {
                 fonts
                     .font_data
-                    .insert("terminal-cjk".into(), font_data(bytes, 0).into());
+                    .insert("terminal-cjk".into(), font_data(&bytes, 0).into());
                 for family in fonts.families.values_mut() {
                     family.push("terminal-cjk".into());
                 }
@@ -278,7 +283,11 @@ mod tests {
         let bytes = std::fs::read("/System/Library/Fonts/Menlo.ttc").unwrap();
         let mut indices = std::collections::BTreeSet::new();
         for style in 0..4 {
-            indices.insert(select_face(&bytes, style, None).expect("Missing Menlo style"));
+            let index = select_face(&bytes, style, None).expect("Missing Menlo style");
+            indices.insert(index);
+            let data = font_data(&bytes, index);
+            assert!(data.font.len() < bytes.len() / 2);
+            assert_eq!(select_face(&data.font, style, None), Some(0));
         }
         assert_eq!(indices.len(), 4);
     }
