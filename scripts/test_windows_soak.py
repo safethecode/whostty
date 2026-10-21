@@ -64,6 +64,21 @@ class WindowsSoakTest(unittest.TestCase):
             self.assertEqual(status["bytes"], len(output))
             self.assertLess(status["elapsed_seconds"], 3)
 
+    def test_idle_baseline_does_not_count_as_output_or_shorten_workload(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            started = time.monotonic()
+            result = subprocess.run(self.child_command(
+                temporary, "--duration", "0.2", "--idle-seconds", "0.5",
+                "--lines-per-second", "100"), capture_output=True, timeout=5)
+            self.assertEqual(result.returncode, 0, result.stderr.decode(errors="replace"))
+            status = json.loads((Path(temporary) / "child-status.json").read_text(encoding="utf-8"))
+            self.assertEqual(status["phase"], "output")
+            self.assertEqual(status["reason"], "duration")
+            self.assertGreaterEqual(time.monotonic() - started, 0.65)
+            self.assertGreaterEqual(status["elapsed_seconds"], 0.2)
+            self.assertEqual(status["bytes"], len(result.stdout))
+            self.assertGreaterEqual(status["lines"], 15)
+
     def test_arguments_reject_nonfinite_and_unbounded_work(self):
         soak = load_soak()
         for option, value in [("--duration", "nan"), ("--duration", "inf"),
@@ -107,6 +122,10 @@ class WindowsSoakTest(unittest.TestCase):
                 for field in ["private_bytes", "rss_bytes", "handles", "threads"]:
                     self.assertGreater(sample[field], 0, field)
                 self.assertGreaterEqual(sample["cpu_seconds"], 0)
+                regions = reader.memory_map()
+                self.assertGreater(regions["committed_regions"], 0)
+                self.assertGreater(regions["committed_bytes_by_type"]["private"], 0)
+                self.assertTrue(regions["largest_regions"])
                 process.terminate()
                 process.wait(timeout=3)
                 self.assertFalse(reader.sample()["alive"])
