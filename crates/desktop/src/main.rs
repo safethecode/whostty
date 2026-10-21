@@ -7,6 +7,7 @@ mod fonts;
 mod icon;
 mod launch;
 mod layout;
+mod memory;
 mod shaping;
 mod view;
 mod workspace;

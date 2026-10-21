@@ -257,6 +257,26 @@ impl Renderer {
         (self.atlas.glyphs.len(), self.layouts.len(), self.drawn_runs)
     }
 
+    pub fn memory_report(&self) -> serde_json::Value {
+        let bytes: usize = self.sources.iter().map(|data| data.font.len()).sum();
+        let capacity: usize = self
+            .sources
+            .iter()
+            .map(|data| match &data.font {
+                std::borrow::Cow::Owned(bytes) => bytes.capacity(),
+                std::borrow::Cow::Borrowed(bytes) => bytes.len(),
+            })
+            .sum();
+        serde_json::json!({
+            "unique_font_sources": self.sources.len(),
+            "font_source_bytes": bytes,
+            "font_source_capacity_bytes": capacity,
+            "layout_cache_estimated_bytes": self.layout_bytes,
+            "glyph_entries": self.atlas.glyphs.len(),
+            "atlas_rgba_bytes": if self.atlas.texture.is_some() { ATLAS_SIDE * ATLAS_SIDE * 4 } else { 0 },
+        })
+    }
+
     pub fn paint(&mut self, painter: &Painter, paint: Paint<'_>) -> bool {
         let density = painter.ctx().pixels_per_point();
         self.atlas.begin(painter.ctx());

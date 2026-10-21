@@ -438,7 +438,10 @@ def run_monitor(args):
     atomic_json(directory / "run.json", metadata)
     try:
         with (directory / "app.log").open("wb") as log, (directory / "samples.jsonl").open("w", encoding="utf-8") as journal:
-            app = subprocess.Popen(command, stdout=log, stderr=log)
+            environment = os.environ.copy()
+            if args.memory_map:
+                environment["WHOSTTY_MEMORY_LOG"] = str(directory / "allocator.jsonl")
+            app = subprocess.Popen(command, stdout=log, stderr=log, env=environment)
             app_reader = ProcessReader(app.pid)
             print(json.dumps({"event": "started", "app_pid": app.pid, "output": str(directory)}), flush=True)
             next_sample = time.monotonic()

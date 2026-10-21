@@ -44,6 +44,7 @@ pub struct Whostty {
     search_open: bool,
     search_focus: bool,
     reported_focus: Option<PaneId>,
+    memory: Option<crate::memory::Recorder>,
 }
 
 impl Whostty {
@@ -87,6 +88,7 @@ impl Whostty {
             search_open: false,
             search_focus: false,
             reported_focus: None,
+            memory: crate::memory::Recorder::from_environment(cc),
         };
         if !app.config_path.exists() {
             if let Err(error) = app.settings.save(&app.config_path) {
@@ -1249,6 +1251,9 @@ impl eframe::App for Whostty {
                 && self.close.is_none()
                 && !self.search_focus,
         );
+        if let Some(memory) = &mut self.memory {
+            memory.update(ctx);
+        }
     }
 }
 
@@ -1327,6 +1332,7 @@ mod tests {
             search_open: false,
             search_focus: false,
             reported_focus: None,
+            memory: None,
         }
     }
 
