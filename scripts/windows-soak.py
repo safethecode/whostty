@@ -435,7 +435,7 @@ def run_monitor(args):
                 "stall_seconds": args.stall_seconds, "logical_cpu_count": os.cpu_count(),
                 "scrollback_lines": args.scrollback, "font_ligatures": not args.no_ligatures,
                 "idle_seconds": args.idle_seconds, "wgpu_backend_override": os.environ.get("WGPU_BACKEND")}
-    metadata["gpu_memory_mode"] = os.environ.get("WHOSTTY_GPU_MEMORY_MODE", "default")
+    metadata["gpu_memory_mode"] = os.environ.get("WHOSTTY_GPU_MEMORY_MODE", "compact")
     atomic_json(directory / "run.json", metadata)
     try:
         with (directory / "app.log").open("wb") as log, (directory / "samples.jsonl").open("w", encoding="utf-8") as journal:

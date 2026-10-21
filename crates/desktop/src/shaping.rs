@@ -9,7 +9,9 @@ use std::{
 };
 use unicode_script::{Script, UnicodeScript};
 
-const ATLAS_SIDE: usize = 2048;
+const ATLAS_SIDE: usize = 512;
+const MAX_ATLAS_SIDE: usize = 2048;
+const MAX_ATLAS_BYTES: usize = 16 * 1024 * 1024;
 const MAX_LAYOUTS: usize = 512;
 const MAX_LAYOUT_BYTES: usize = 8 * 1024 * 1024;
 const MAX_RUN_BYTES: usize = 8192;
@@ -59,17 +61,44 @@ struct GlyphKey {
 
 #[derive(Clone, Copy)]
 struct CachedGlyph {
+    page: usize,
     uv: Rect,
     offset: Vec2,
     size: Vec2,
 }
 
-struct Atlas {
-    texture: Option<TextureHandle>,
-    glyphs: HashMap<GlyphKey, Option<CachedGlyph>>,
+struct Page {
+    texture: TextureHandle,
+    side: usize,
     x: usize,
     y: usize,
     row: usize,
+    used: u64,
+}
+
+impl Page {
+    fn place(&mut self, width: usize, height: usize) -> Option<[usize; 2]> {
+        if width + 2 > self.side || height + 2 > self.side {
+            return None;
+        }
+        let (x, y, row) = if self.x + width + 1 > self.side {
+            (1, self.y + self.row + 1, 0)
+        } else {
+            (self.x, self.y, self.row)
+        };
+        if y + height + 1 > self.side {
+            return None;
+        }
+        self.x = x + width + 1;
+        self.y = y;
+        self.row = row.max(height);
+        Some([x, y])
+    }
+}
+
+struct Atlas {
+    pages: Vec<Option<Page>>,
+    glyphs: HashMap<GlyphKey, Option<CachedGlyph>>,
     full: bool,
     frame: u64,
 }
@@ -77,11 +106,8 @@ struct Atlas {
 impl Default for Atlas {
     fn default() -> Self {
         Self {
-            texture: None,
+            pages: Vec::new(),
             glyphs: HashMap::new(),
-            x: 1,
-            y: 1,
-            row: 0,
             full: false,
             frame: u64::MAX,
         }
@@ -94,18 +120,75 @@ impl Atlas {
         // Never overwrite UVs already referenced by this frame, including other panes.
         if self.full && self.frame != frame {
             self.glyphs.clear();
-            self.x = 1;
-            self.y = 1;
-            self.row = 0;
+            self.pages.clear();
             self.full = false;
-            if let Some(texture) = &mut self.texture {
-                texture.set(
-                    ColorImage::new([ATLAS_SIDE; 2], Color32::TRANSPARENT),
-                    egui::TextureOptions::LINEAR,
-                );
-            }
         }
         self.frame = frame;
+    }
+
+    fn bytes(&self) -> usize {
+        self.pages
+            .iter()
+            .flatten()
+            .map(|page| page.side * page.side * 4)
+            .sum()
+    }
+
+    fn place(
+        &mut self,
+        ctx: &egui::Context,
+        width: usize,
+        height: usize,
+    ) -> Option<(usize, [usize; 2])> {
+        for (index, page) in self.pages.iter_mut().enumerate() {
+            if let Some(page) = page {
+                if let Some(pos) = page.place(width, height) {
+                    page.used = self.frame;
+                    return Some((index, pos));
+                }
+            }
+        }
+        let side = ATLAS_SIDE.max((width.max(height) + 2).checked_next_power_of_two()?);
+        if side > MAX_ATLAS_SIDE {
+            return None;
+        }
+        while self.bytes() + side * side * 4 > MAX_ATLAS_BYTES {
+            // Evict only pages which no pane or earlier run used in this pass.
+            let (index, _) = self
+                .pages
+                .iter()
+                .enumerate()
+                .filter_map(|(i, page)| {
+                    page.as_ref()
+                        .filter(|p| p.used != self.frame)
+                        .map(|p| (i, p.used))
+                })
+                .min_by_key(|(_, used)| *used)?;
+            self.glyphs
+                .retain(|_, glyph| glyph.is_none_or(|glyph| glyph.page != index));
+            self.pages[index] = None;
+        }
+        let mut page = Page {
+            texture: ctx.load_texture(
+                "terminal-shaped-glyphs",
+                ColorImage::new([side; 2], Color32::TRANSPARENT),
+                egui::TextureOptions::LINEAR,
+            ),
+            side,
+            x: 1,
+            y: 1,
+            row: 0,
+            used: self.frame,
+        };
+        let pos = page.place(width, height)?;
+        let index = if let Some(index) = self.pages.iter().position(Option::is_none) {
+            self.pages[index] = Some(page);
+            index
+        } else {
+            self.pages.push(Some(page));
+            self.pages.len() - 1
+        };
+        Some((index, pos))
     }
 
     fn glyph(
@@ -115,6 +198,9 @@ impl Atlas {
         key: GlyphKey,
     ) -> Option<Option<CachedGlyph>> {
         if let Some(glyph) = self.glyphs.get(&key) {
+            if let Some(glyph) = glyph {
+                self.pages[glyph.page].as_mut().unwrap().used = self.frame;
+            }
             return Some(*glyph);
         }
         if self.glyphs.len() >= 8192 {
@@ -147,18 +233,11 @@ impl Atlas {
             self.glyphs.insert(key, None);
             return Some(None);
         }
-        if width + 2 > ATLAS_SIDE || height + 2 > ATLAS_SIDE {
+        if width + 2 > MAX_ATLAS_SIDE || height + 2 > MAX_ATLAS_SIDE {
             return None;
         }
-        if self.x + width + 1 > ATLAS_SIDE {
-            self.x = 1;
-            self.y += self.row + 1;
-            self.row = 0;
-        }
-        if self.y + height + 1 > ATLAS_SIDE {
-            self.full = true;
-            return None;
-        }
+        let (page_index, [x, y]) = self.place(ctx, width, height)?;
+        let page = self.pages[page_index].as_mut().unwrap();
         let mut image = ColorImage::new([width, height], Color32::TRANSPARENT);
         outline.draw(|x, y, coverage| {
             // Match egui's coverage gamma so custom glyphs retain the existing text weight.
@@ -166,30 +245,20 @@ impl Atlas {
             image[(x as usize, y as usize)] =
                 Color32::from_rgba_premultiplied(alpha, alpha, alpha, alpha);
         });
-        let texture = self.texture.get_or_insert_with(|| {
-            ctx.load_texture(
-                "terminal-shaped-glyphs",
-                ColorImage::new([ATLAS_SIDE; 2], Color32::TRANSPARENT),
-                egui::TextureOptions::LINEAR,
-            )
-        });
-        texture.set_partial([self.x, self.y], image, egui::TextureOptions::LINEAR);
+        page.texture
+            .set_partial([x, y], image, egui::TextureOptions::LINEAR);
         let glyph = CachedGlyph {
+            page: page_index,
             uv: Rect::from_min_max(
+                Pos2::new(x as f32 / page.side as f32, y as f32 / page.side as f32),
                 Pos2::new(
-                    self.x as f32 / ATLAS_SIDE as f32,
-                    self.y as f32 / ATLAS_SIDE as f32,
-                ),
-                Pos2::new(
-                    (self.x + width) as f32 / ATLAS_SIDE as f32,
-                    (self.y + height) as f32 / ATLAS_SIDE as f32,
+                    (x + width) as f32 / page.side as f32,
+                    (y + height) as f32 / page.side as f32,
                 ),
             ),
             offset: Vec2::new(bounds.min.x, bounds.min.y),
             size: Vec2::new(width as f32, height as f32),
         };
-        self.x += width + 1;
-        self.row = self.row.max(height);
         self.glyphs.insert(key, Some(glyph));
         Some(Some(glyph))
     }
@@ -273,7 +342,8 @@ impl Renderer {
             "font_source_capacity_bytes": capacity,
             "layout_cache_estimated_bytes": self.layout_bytes,
             "glyph_entries": self.atlas.glyphs.len(),
-            "atlas_rgba_bytes": if self.atlas.texture.is_some() { ATLAS_SIDE * ATLAS_SIDE * 4 } else { 0 },
+            "atlas_rgba_bytes": self.atlas.bytes(),
+            "atlas_pages": self.atlas.pages.iter().flatten().count(),
         })
     }
 
@@ -354,11 +424,17 @@ impl Renderer {
                 ));
             }
         }
-        let Some(texture) = &self.atlas.texture else {
-            return true;
-        };
-        let mut mesh = Mesh::with_texture(texture.id());
+        let mut mesh = Mesh::default();
+        let mut drawn = false;
         for (position, glyph, bold, italic, baseline) in quads {
+            let texture = self.atlas.pages[glyph.page].as_ref().unwrap().texture.id();
+            if mesh.texture_id != texture {
+                let previous = std::mem::replace(&mut mesh, Mesh::with_texture(texture));
+                if !previous.vertices.is_empty() {
+                    painter.add(previous);
+                    drawn = true;
+                }
+            }
             let origin = paint.pos + (position + glyph.offset) / density;
             let origin = Pos2::new(
                 (origin.x * density).round() / density,
@@ -379,8 +455,11 @@ impl Renderer {
             }
         }
         if !mesh.vertices.is_empty() {
-            self.drawn_runs = self.drawn_runs.saturating_add(1);
             painter.add(mesh);
+            drawn = true;
+        }
+        if drawn {
+            self.drawn_runs = self.drawn_runs.saturating_add(1);
         }
         true
     }
@@ -706,16 +785,20 @@ mod tests {
                 .unwrap()
                 .unwrap()
                 .uv;
-            for size in (400..512).rev() {
+            let mut exhausted = false;
+            for size in (100..512).rev() {
                 if renderer
                     .atlas
                     .glyph(ctx, &renderer.sources, GlyphKey { size, ..first })
                     .is_none()
                 {
+                    exhausted = true;
                     break;
                 }
             }
-            assert!(renderer.atlas.full, "Fixture did not fill the atlas");
+            assert!(exhausted, "Fixture did not fill the atlas");
+            assert!(renderer.atlas.pages.len() > 1);
+            assert!(renderer.atlas.bytes() <= MAX_ATLAS_BYTES);
             renderer.atlas.begin(ctx);
             assert_eq!(
                 renderer.atlas.glyphs[&first].unwrap().uv,
@@ -725,8 +808,33 @@ mod tests {
         });
         let _ = ctx.run(Default::default(), |ctx| {
             renderer.atlas.begin(ctx);
-            assert!(!renderer.atlas.full);
-            assert!(renderer.atlas.glyphs.is_empty());
+            let first = GlyphKey {
+                source: 0,
+                id: 5,
+                size: 512,
+            };
+            let old = renderer.atlas.glyphs[&first].unwrap();
+            let texture = renderer.atlas.pages[old.page]
+                .as_ref()
+                .unwrap()
+                .texture
+                .id();
+            renderer.atlas.glyph(ctx, &renderer.sources, first).unwrap();
+            // A cold page can be replaced, while another pane's live UV remains valid.
+            assert!(renderer
+                .atlas
+                .glyph(ctx, &renderer.sources, GlyphKey { size: 99, ..first })
+                .is_some());
+            assert_eq!(renderer.atlas.glyphs[&first].unwrap().uv, old.uv);
+            assert_eq!(
+                renderer.atlas.pages[old.page]
+                    .as_ref()
+                    .unwrap()
+                    .texture
+                    .id(),
+                texture
+            );
+            assert!(renderer.atlas.bytes() <= MAX_ATLAS_BYTES);
         });
     }
 
@@ -789,5 +897,6 @@ mod tests {
         assert_eq!(renderer.layouts.len(), 1);
         assert_eq!(renderer.atlas.glyphs.len(), 5); // plus a blank advancing ligature placeholder.
         assert!(!second.shapes.is_empty());
+        assert_eq!(renderer.atlas.bytes(), 1024 * 1024);
     }
 }

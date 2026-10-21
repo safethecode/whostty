@@ -1,5 +1,11 @@
 # Whostty 작업 맥락
 
+## 2026-10-21 메모리 최적화
+
+[적용과 검증 기록](memory-optimization-2026-10-21.md): compact GPU 설정을 기본으로 적용하고, TTC face 추출·선택 테이블 읽기·
+512px 단위 glyph atlas를 구현했다. Windows CI의 10,000행 late PrivateUsage는 461.73→87.06MiB, GPU 예약은 320→12MiB였다.
+기본 스크롤백은 유지한다. 50MiB/10배 목표와 원래 RTX 장비의 재측정은 완료하지 않았다.
+
 ## 2026-10-21 메모리 분석과 Ghostty 비교
 
 [분석 기록](memory-and-ghostty-2026-10-21.md)과 [측정 요약](performance-comparison-2026-10-21.json)에 근거를 남겼다.
@@ -176,8 +182,9 @@ Rustybuzz로 LTR run을 shaping하고 ab_glyph로 OpenType glyph ID를 rasterize
 검색·복사·접근성은 원래 셀 데이터를 유지한다. 같은 glyph는 다시 업로드하지 않는다. font_ligatures 설정을 즉시 전환할 수 있다.
 이전과 같은 em 크기 환산, 빈 advancing placeholder glyph(Fira Code의 contextual ligature), synthetic 스타일·CJK fallback을 처리한다.
 
-레이아웃 캐시는 512개/추정 8 MiB, run은 8 KiB로 제한한다. atlas는 2048² RGBA, glyph metadata는 8192개까지다.
-가득 찬 atlas는 다음 egui pass에서만 비워 현재 pass의 UV를 덮지 않는다. 지원하지 않는 RTL/bidi·bitmap/color/SVG glyph와
+레이아웃 캐시는 512개/추정 8 MiB, run은 8 KiB로 제한한다. atlas는 512²부터 필요한 페이지를 만들며 최대 총 16MiB,
+glyph metadata는 8192개까지다. 이번 pass에서 사용하지 않은 페이지만 교체하고, metadata 전체 초기화는 다음 pass까지 미뤄
+현재 pass의 UV를 덮지 않는다. 지원하지 않는 RTL/bidi·bitmap/color/SVG glyph와
 제한을 넘는 run은 기존 셀 렌더러로 표시한다. 전체 RTL/색상 emoji·복합 문자 호환성 또는 GPU 성능 동등성을 주장하지 않는다.
 
 테스트용 TTF는 직접 만든 도형/GSUB/GPOS fixture이며 scripts/make-shaping-fixture.py(fontTools 4.54.1)로 재생성한다.

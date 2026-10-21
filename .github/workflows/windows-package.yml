@@ -47,7 +47,9 @@ jobs:
             python scripts/windows-soak.py --exe $runtimeExe --output "dist/memory-history-$history" --idle-seconds 8 --duration 20 --warmup-seconds 2 --alternate-interval 0 --scrollback $history --memory-map --close-on-success
             if ($LASTEXITCODE -ne 0) { throw "Native memory diagnostic failed ($history)" }
           }
-          foreach ($mode in @('memory', 'compact')) {
+          python scripts/verify_memory_budget.py dist/memory-history-0 dist/memory-history-10000
+          if ($LASTEXITCODE -ne 0) { throw 'Default memory regression budget exceeded' }
+          foreach ($mode in @('memory', 'performance')) {
             $env:WHOSTTY_GPU_MEMORY_MODE = $mode
             ./scripts/check-windows-runtime.ps1 -Executable $runtimeExe -RequireBundledConpty -LatencySamples 10 -ReportPath "dist/gpu-$mode-check.json"
             python scripts/windows-soak.py --exe $runtimeExe --output "dist/memory-gpu-$mode" --idle-seconds 8 --duration 20 --warmup-seconds 2 --alternate-interval 0 --scrollback 0 --memory-map --close-on-success

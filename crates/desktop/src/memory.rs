@@ -1,4 +1,4 @@
-//! Opt-in diagnostic accounting; GPU reservations and process private memory
+//! GPU memory controls and opt-in accounting; GPU reservations and process private memory
 //! are different accounting domains and must not be added together.
 use eframe::{egui, wgpu};
 use serde_json::{json, Value};
@@ -8,18 +8,17 @@ use std::{
     time::{Duration, Instant},
 };
 
-/// Explicit diagnostic controls for ablation runs. Normal app defaults stay
-/// unchanged until hardware/performance regressions have been evaluated.
+/// Keep small terminal workloads from reserving general-purpose GPU heap sizes.
+/// The old settings remain available for controlled diagnostic comparisons.
 pub fn configure_gpu(options: &mut eframe::NativeOptions) {
-    let Ok(mode) = std::env::var("WHOSTTY_GPU_MEMORY_MODE") else {
-        return;
-    };
+    let mode = std::env::var("WHOSTTY_GPU_MEMORY_MODE").unwrap_or_else(|_| "compact".into());
     let (memory_usage, compact_bindings) = match mode.as_str() {
+        "performance" => return,
         "memory" => (true, false),
         "compact" => (true, true),
         _ => {
             eprintln!("Unknown WHOSTTY_GPU_MEMORY_MODE: {mode}");
-            return;
+            (true, true)
         }
     };
     if let eframe::egui_wgpu::WgpuSetup::CreateNew(setup) = &mut options.wgpu_options.wgpu_setup {
@@ -59,7 +58,7 @@ pub fn report(ctx: &egui::Context, device: Option<&wgpu::Device>) -> Value {
                "blocks":report.blocks.iter().map(|block| block.size).collect::<Vec<_>>(),"allocations":allocations})
     });
     json!({"textures":textures,"shaping":fonts,"gpu_allocator":gpu,
-           "gpu_memory_mode":std::env::var("WHOSTTY_GPU_MEMORY_MODE").unwrap_or_else(|_|"default".into()),
+           "gpu_memory_mode":std::env::var("WHOSTTY_GPU_MEMORY_MODE").unwrap_or_else(|_|"compact".into()),
            "scope":"Logical font/texture/cache sizes and backend GPU allocator report. Excludes egui font-byte clones, driver/system overhead and process heap accounting. GPU reservations are not OS process private bytes."})
 }
 

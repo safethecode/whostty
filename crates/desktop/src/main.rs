@@ -3,6 +3,7 @@
 mod accessibility;
 mod app;
 mod check;
+mod font_collection;
 mod fonts;
 mod icon;
 mod launch;
