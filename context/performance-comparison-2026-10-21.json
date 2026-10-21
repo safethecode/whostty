@@ -1,0 +1,1705 @@
+{
+  "date": "2026-10-21",
+  "product_source": "bb9ef1310f2f96f40209d0672bbba8748a0458fd",
+  "fixture_sha256": "70ecee74f279ecb106c868a272343e30a244a6e54399118f9afcef9d1462872d",
+  "binary_sha256": "43c7d89afc891b798a97da0a328849019427efe36e74fd13d38171429023f142",
+  "ghostty_version": "Ghostty 1.2.3\n\nVersion\n  - version: 1.2.3\n  - channel: stable\nBuild Config\n  - Zig version   : 0.14.1\n  - build mode    : builtin.OptimizeMode.ReleaseFast\n  - app runtime   : apprt.Runtime.none\n  - font engine   : font.main.Backend.coretext\n  - renderer      : renderer.generic.Renderer(renderer.Metal)\n  - libxev        : kqueue\n",
+  "platform": "macOS-26.5.2-arm64-arm-64bit",
+  "window_state": "background",
+  "grid": [
+    121,
+    29
+  ],
+  "medians": {
+    "whostty": {
+      "idle_footprint_mib": 392.2666549682617,
+      "soak_footprint_mib": 426.2510299682617,
+      "soak_rss_mib": 236.734375,
+      "soak_cpu_percent": 1.3170126682504963,
+      "burst_mib_per_second": 119.00268717758769,
+      "parser_roundtrip_p50_ms": 0.218083,
+      "parser_roundtrip_p95_ms": 0.538708
+    },
+    "ghostty": {
+      "idle_footprint_mib": 79.0479965209961,
+      "soak_footprint_mib": 80.23558807373047,
+      "soak_rss_mib": 131.0625,
+      "soak_cpu_percent": 0.15207561232189432,
+      "burst_mib_per_second": 72.4932161108244,
+      "parser_roundtrip_p50_ms": 0.226792,
+      "parser_roundtrip_p95_ms": 0.461333
+    }
+  },
+  "runs": [
+    {
+      "product": "whostty",
+      "window_state": "background",
+      "grid": [
+        121,
+        29
+      ],
+      "idle": {
+        "rss_bytes": 228999168,
+        "footprint_bytes": 395592712,
+        "cpu_seconds": 0.094268202
+      },
+      "after_soak": {
+        "rss_bytes": 248610816,
+        "footprint_bytes": 434062344,
+        "cpu_seconds": 0.586476949
+      },
+      "after_burst": {
+        "rss_bytes": 248823808,
+        "footprint_bytes": 434373640,
+        "cpu_seconds": 0.637729089
+      },
+      "soak_app_cpu_percent": 1.4127419953763336,
+      "fixture": {
+        "soak_lines": 18000,
+        "soak_seconds": 31.918738124999436,
+        "burst_bytes": 20400000,
+        "burst_seconds": 0.16348333399946569,
+        "burst_mib_per_second": 119.00268717758769,
+        "payload_sha256": "4a3d36a2ef4bf0eadc0da4d28d208ce808b0ac7e9b6d279746163368520952ed",
+        "parser_roundtrip_ms": {
+          "min": 0.121417,
+          "p50": 0.192625,
+          "p95": 0.325,
+          "max": 0.755166
+        }
+      },
+      "window_bounds": [
+        {
+          "Height": 752,
+          "Width": 1120,
+          "X": 340,
+          "Y": 121
+        }
+      ]
+    },
+    {
+      "product": "ghostty",
+      "window_state": "background",
+      "grid": [
+        121,
+        29
+      ],
+      "idle": {
+        "rss_bytes": 130220032,
+        "footprint_bytes": 82576560,
+        "cpu_seconds": 0.00778469
+      },
+      "after_soak": {
+        "rss_bytes": 137068544,
+        "footprint_bytes": 83821864,
+        "cpu_seconds": 0.057832163
+      },
+      "after_burst": {
+        "rss_bytes": 137281536,
+        "footprint_bytes": 83821864,
+        "cpu_seconds": 0.067219059
+      },
+      "soak_app_cpu_percent": 0.15611800432779177,
+      "fixture": {
+        "soak_lines": 18000,
+        "soak_seconds": 31.88808274999974,
+        "burst_bytes": 20400000,
+        "burst_seconds": 0.26407749999998487,
+        "burst_mib_per_second": 73.67138834125821,
+        "payload_sha256": "4a3d36a2ef4bf0eadc0da4d28d208ce808b0ac7e9b6d279746163368520952ed",
+        "parser_roundtrip_ms": {
+          "min": 0.138167,
+          "p50": 0.226792,
+          "p95": 0.448,
+          "max": 0.66025
+        }
+      },
+      "window_bounds": [
+        {
+          "Height": 548,
+          "Width": 1158,
+          "X": 642,
+          "Y": 416
+        }
+      ]
+    },
+    {
+      "product": "ghostty",
+      "window_state": "background",
+      "grid": [
+        121,
+        29
+      ],
+      "idle": {
+        "rss_bytes": 130596864,
+        "footprint_bytes": 82887832,
+        "cpu_seconds": 0.011665541
+      },
+      "after_soak": {
+        "rss_bytes": 137428992,
+        "footprint_bytes": 84133112,
+        "cpu_seconds": 0.059322529
+      },
+      "after_burst": {
+        "rss_bytes": 137674752,
+        "footprint_bytes": 84198648,
+        "cpu_seconds": 0.0710786
+      },
+      "soak_app_cpu_percent": 0.1475382543938339,
+      "fixture": {
+        "soak_lines": 18000,
+        "soak_seconds": 32.01457224999831,
+        "burst_bytes": 20400000,
+        "burst_seconds": 0.2805218330013304,
+        "burst_mib_per_second": 69.35273396204863,
+        "payload_sha256": "4a3d36a2ef4bf0eadc0da4d28d208ce808b0ac7e9b6d279746163368520952ed",
+        "parser_roundtrip_ms": {
+          "min": 0.144125,
+          "p50": 0.2415,
+          "p95": 0.536208,
+          "max": 0.745666
+        }
+      },
+      "window_bounds": [
+        {
+          "Height": 548,
+          "Width": 1158,
+          "X": 642,
+          "Y": 416
+        }
+      ]
+    },
+    {
+      "product": "whostty",
+      "window_state": "background",
+      "grid": [
+        121,
+        29
+      ],
+      "idle": {
+        "rss_bytes": 229277696,
+        "footprint_bytes": 411763744,
+        "cpu_seconds": 0.612009096
+      },
+      "after_soak": {
+        "rss_bytes": 97419264,
+        "footprint_bytes": 447218720,
+        "cpu_seconds": 1.025587819
+      },
+      "after_burst": {
+        "rss_bytes": 97927168,
+        "footprint_bytes": 447382560,
+        "cpu_seconds": 1.074381733
+      },
+      "soak_app_cpu_percent": 1.172287101953812,
+      "fixture": {
+        "soak_lines": 18000,
+        "soak_seconds": 31.873289125000156,
+        "burst_bytes": 20400000,
+        "burst_seconds": 0.15168291599911754,
+        "burst_mib_per_second": 128.26069387274097,
+        "payload_sha256": "4a3d36a2ef4bf0eadc0da4d28d208ce808b0ac7e9b6d279746163368520952ed",
+        "parser_roundtrip_ms": {
+          "min": 0.115917,
+          "p50": 0.218083,
+          "p95": 0.539583,
+          "max": 0.948625
+        }
+      },
+      "window_bounds": [
+        {
+          "Height": 752,
+          "Width": 1120,
+          "X": 340,
+          "Y": 121
+        }
+      ]
+    },
+    {
+      "product": "whostty",
+      "window_state": "background",
+      "grid": [
+        121,
+        29
+      ],
+      "idle": {
+        "rss_bytes": 229244928,
+        "footprint_bytes": 411321400,
+        "cpu_seconds": 0.335123647
+      },
+      "after_soak": {
+        "rss_bytes": 248233984,
+        "footprint_bytes": 446956600,
+        "cpu_seconds": 0.797032014
+      },
+      "after_burst": {
+        "rss_bytes": 248332288,
+        "footprint_bytes": 447185976,
+        "cpu_seconds": 0.861804402
+      },
+      "soak_app_cpu_percent": 1.3170126682504963,
+      "fixture": {
+        "soak_lines": 18000,
+        "soak_seconds": 31.880469291998452,
+        "burst_bytes": 20400000,
+        "burst_seconds": 0.47397129199998744,
+        "burst_mib_per_second": 41.0466970955026,
+        "payload_sha256": "4a3d36a2ef4bf0eadc0da4d28d208ce808b0ac7e9b6d279746163368520952ed",
+        "parser_roundtrip_ms": {
+          "min": 0.11225,
+          "p50": 0.232125,
+          "p95": 0.538708,
+          "max": 2.06575
+        }
+      },
+      "window_bounds": [
+        {
+          "Height": 752,
+          "Width": 1120,
+          "X": 340,
+          "Y": 121
+        }
+      ]
+    },
+    {
+      "product": "ghostty",
+      "window_state": "background",
+      "grid": [
+        121,
+        29
+      ],
+      "idle": {
+        "rss_bytes": 130711552,
+        "footprint_bytes": 82953320,
+        "cpu_seconds": 0.008507552
+      },
+      "after_soak": {
+        "rss_bytes": 137756672,
+        "footprint_bytes": 84460768,
+        "cpu_seconds": 0.057296257
+      },
+      "after_burst": {
+        "rss_bytes": 100171776,
+        "footprint_bytes": 84411616,
+        "cpu_seconds": 0.068693173
+      },
+      "soak_app_cpu_percent": 0.15207561232189432,
+      "fixture": {
+        "soak_lines": 18000,
+        "soak_seconds": 31.895322083000792,
+        "burst_bytes": 20400000,
+        "burst_seconds": 0.26836933300000965,
+        "burst_mib_per_second": 72.4932161108244,
+        "payload_sha256": "4a3d36a2ef4bf0eadc0da4d28d208ce808b0ac7e9b6d279746163368520952ed",
+        "parser_roundtrip_ms": {
+          "min": 0.121875,
+          "p50": 0.222125,
+          "p95": 0.461333,
+          "max": 0.674041
+        }
+      },
+      "window_bounds": [
+        {
+          "Height": 548,
+          "Width": 1158,
+          "X": 642,
+          "Y": 416
+        }
+      ]
+    }
+  ],
+  "limitations": [
+    "Same Menlo 15pt, grid, Python fixture and payload; native font metrics can differ.",
+    "Zero scrollback isolates rendering/PTY costs; nonzero limits use different product units.",
+    "App CPU excludes fixture and window server; one logical CPU core is 100%.",
+    "macOS physical footprint and RSS are not Windows PrivateUsage.",
+    "DSR acknowledges the parser, not GPU display or physical keyboard latency.",
+    "Desktop load and OS scheduling are not isolated; profile captures run outside timed phases."
+  ],
+  "mac_default_history_single_pair": {
+    "whostty": {
+      "idle_footprint_mib": 377.20410919189453,
+      "soak_footprint_mib": 446.6728820800781,
+      "soak_rss_mib": 269.78125,
+      "soak_cpu_percent": 1.3816326156376306,
+      "burst_mib_per_second": 107.50339208268421,
+      "parser_roundtrip_p50_ms": 0.191333,
+      "parser_roundtrip_p95_ms": 0.355542
+    },
+    "ghostty": {
+      "idle_footprint_mib": 78.4542007446289,
+      "soak_footprint_mib": 88.40753173828125,
+      "soak_rss_mib": 139.15625,
+      "soak_cpu_percent": 0.16235870194762395,
+      "burst_mib_per_second": 85.5912378000649,
+      "parser_roundtrip_p50_ms": 0.247584,
+      "parser_roundtrip_p95_ms": 0.351625
+    }
+  },
+  "windows_initial": {
+    "ci_run": 39591461683,
+    "backend": "DX12 / Microsoft Basic Render Driver / CPU",
+    "source": "3e34600 (product Rust sources unchanged from bb9ef13)",
+    "cases": [
+      {
+        "scrollback_lines": 0,
+        "completed": true,
+        "fixture_lines": 12000,
+        "binary_sha256": "5774d4fa51a4ef38bd4071b99c51f78bb85f10c51a147d988f5ebac9cba64199",
+        "phases": {
+          "idle": {
+            "private_mib_median": 428.3515625,
+            "private_mib_min": 428.23828125,
+            "private_mib_max": 429.30078125,
+            "samples": 7
+          },
+          "output": {
+            "private_mib_median": 431.859375,
+            "private_mib_min": 430.22265625,
+            "private_mib_max": 432.73828125,
+            "samples": 21
+          }
+        },
+        "maps": {
+          "idle": {
+            "committed_bytes_by_type": {
+              "private": 445243392,
+              "mapped": 22122496,
+              "image": 101593088,
+              "other": 0
+            },
+            "largest_regions": [
+              {
+                "bytes": 268435456,
+                "type": "private",
+                "protect": 4
+              },
+              {
+                "bytes": 67108864,
+                "type": "private",
+                "protect": 1028
+              },
+              {
+                "bytes": 64000000,
+                "type": "private",
+                "protect": 4
+              },
+              {
+                "bytes": 16781312,
+                "type": "private",
+                "protect": 4
+              },
+              {
+                "bytes": 13459456,
+                "type": "private",
+                "protect": 4
+              },
+              {
+                "bytes": 9482240,
+                "type": "image",
+                "protect": 32
+              },
+              {
+                "bytes": 6615040,
+                "type": "image",
+                "protect": 32
+              },
+              {
+                "bytes": 5943296,
+                "type": "image",
+                "protect": 32
+              }
+            ]
+          },
+          "output": {
+            "committed_bytes_by_type": {
+              "private": 448122880,
+              "mapped": 22122496,
+              "image": 101593088,
+              "other": 0
+            },
+            "largest_regions": [
+              {
+                "bytes": 268435456,
+                "type": "private",
+                "protect": 4
+              },
+              {
+                "bytes": 67108864,
+                "type": "private",
+                "protect": 1028
+              },
+              {
+                "bytes": 64000000,
+                "type": "private",
+                "protect": 4
+              },
+              {
+                "bytes": 16781312,
+                "type": "private",
+                "protect": 4
+              },
+              {
+                "bytes": 13459456,
+                "type": "private",
+                "protect": 4
+              },
+              {
+                "bytes": 9482240,
+                "type": "image",
+                "protect": 32
+              },
+              {
+                "bytes": 6615040,
+                "type": "image",
+                "protect": 32
+              },
+              {
+                "bytes": 5943296,
+                "type": "image",
+                "protect": 32
+              }
+            ]
+          },
+          "completed": {
+            "committed_bytes_by_type": {
+              "private": 449830912,
+              "mapped": 22122496,
+              "image": 101593088,
+              "other": 0
+            },
+            "largest_regions": [
+              {
+                "bytes": 268435456,
+                "type": "private",
+                "protect": 4
+              },
+              {
+                "bytes": 67108864,
+                "type": "private",
+                "protect": 1028
+              },
+              {
+                "bytes": 64000000,
+                "type": "private",
+                "protect": 4
+              },
+              {
+                "bytes": 16781312,
+                "type": "private",
+                "protect": 4
+              },
+              {
+                "bytes": 13459456,
+                "type": "private",
+                "protect": 4
+              },
+              {
+                "bytes": 9482240,
+                "type": "image",
+                "protect": 32
+              },
+              {
+                "bytes": 6615040,
+                "type": "image",
+                "protect": 32
+              },
+              {
+                "bytes": 5943296,
+                "type": "image",
+                "protect": 32
+              }
+            ]
+          }
+        }
+      },
+      {
+        "scrollback_lines": 10000,
+        "completed": true,
+        "fixture_lines": 12000,
+        "binary_sha256": "5774d4fa51a4ef38bd4071b99c51f78bb85f10c51a147d988f5ebac9cba64199",
+        "phases": {
+          "idle": {
+            "private_mib_median": 428.265625,
+            "private_mib_min": 427.44140625,
+            "private_mib_max": 429.40234375,
+            "samples": 7
+          },
+          "output": {
+            "private_mib_median": 451.421875,
+            "private_mib_min": 433.55078125,
+            "private_mib_max": 461.55859375,
+            "samples": 21
+          }
+        },
+        "maps": {
+          "idle": {
+            "committed_bytes_by_type": {
+              "private": 444346368,
+              "mapped": 22122496,
+              "image": 101593088,
+              "other": 0
+            },
+            "largest_regions": [
+              {
+                "bytes": 268435456,
+                "type": "private",
+                "protect": 4
+              },
+              {
+                "bytes": 67108864,
+                "type": "private",
+                "protect": 1028
+              },
+              {
+                "bytes": 64000000,
+                "type": "private",
+                "protect": 4
+              },
+              {
+                "bytes": 16781312,
+                "type": "private",
+                "protect": 4
+              },
+              {
+                "bytes": 13459456,
+                "type": "private",
+                "protect": 4
+              },
+              {
+                "bytes": 9482240,
+                "type": "image",
+                "protect": 32
+              },
+              {
+                "bytes": 6615040,
+                "type": "image",
+                "protect": 32
+              },
+              {
+                "bytes": 5943296,
+                "type": "image",
+                "protect": 32
+              }
+            ]
+          },
+          "output": {
+            "committed_bytes_by_type": {
+              "private": 451825664,
+              "mapped": 22122496,
+              "image": 101593088,
+              "other": 0
+            },
+            "largest_regions": [
+              {
+                "bytes": 268435456,
+                "type": "private",
+                "protect": 4
+              },
+              {
+                "bytes": 67108864,
+                "type": "private",
+                "protect": 1028
+              },
+              {
+                "bytes": 64000000,
+                "type": "private",
+                "protect": 4
+              },
+              {
+                "bytes": 16781312,
+                "type": "private",
+                "protect": 4
+              },
+              {
+                "bytes": 13459456,
+                "type": "private",
+                "protect": 4
+              },
+              {
+                "bytes": 9482240,
+                "type": "image",
+                "protect": 32
+              },
+              {
+                "bytes": 6615040,
+                "type": "image",
+                "protect": 32
+              },
+              {
+                "bytes": 5943296,
+                "type": "image",
+                "protect": 32
+              }
+            ]
+          },
+          "completed": {
+            "committed_bytes_by_type": {
+              "private": 480022528,
+              "mapped": 22122496,
+              "image": 101593088,
+              "other": 0
+            },
+            "largest_regions": [
+              {
+                "bytes": 268435456,
+                "type": "private",
+                "protect": 4
+              },
+              {
+                "bytes": 67108864,
+                "type": "private",
+                "protect": 1028
+              },
+              {
+                "bytes": 64000000,
+                "type": "private",
+                "protect": 4
+              },
+              {
+                "bytes": 16781312,
+                "type": "private",
+                "protect": 4
+              },
+              {
+                "bytes": 13459456,
+                "type": "private",
+                "protect": 4
+              },
+              {
+                "bytes": 9482240,
+                "type": "image",
+                "protect": 32
+              },
+              {
+                "bytes": 6615040,
+                "type": "image",
+                "protect": 32
+              },
+              {
+                "bytes": 5943296,
+                "type": "image",
+                "protect": 32
+              }
+            ]
+          }
+        }
+      }
+    ]
+  },
+  "allocation_evidence": {
+    "CJK_source_file_bytes": 55373848,
+    "CJK_collection_faces": 18,
+    "selected_face_table_bytes": 3180615,
+    "read_font_large_allocation_bytes_in_instrumented_run": 67125248,
+    "epaint_FontsImpl_new_five_allocation_bytes_in_instrumented_run": 64028672,
+    "instrumentation": "MallocStackLogging=1; overhead is excluded from comparison metrics",
+    "raw_files": {
+      "large-allocations.txt": {
+        "sha256": "fdb9dac1e09a184714a065c02f77199811cf8b558134ef8e67cb3a54a957bf41",
+        "bytes": 2920817
+      },
+      "large-call-tree.txt": {
+        "sha256": "f18b40249d6f4a8534763ef5683bb77df7d3d69a7cb507b6afa7ea7a6cffc7ed",
+        "bytes": 92294815
+      },
+      "idle-vmmap.txt": {
+        "sha256": "994179bff2ffb4342921af2c5f6b7a5309a4340f84bb8f35069a531b52610abf",
+        "bytes": 8241
+      }
+    }
+  },
+  "windows_allocator": {
+    "ci_run": 39592383265,
+    "source": "657be75",
+    "cases": [
+      {
+        "case": "memory-history-0",
+        "first": {
+          "elapsed_seconds": 0.0140627,
+          "gpu_allocator": {
+            "allocated_bytes": 851968,
+            "allocations": [
+              {
+                "bytes": 524288,
+                "name": "(wgpu internal) zero init buffer"
+              },
+              {
+                "bytes": 65536,
+                "name": "egui_vertex_buffer"
+              },
+              {
+                "bytes": 65536,
+                "name": "egui_uniform_buffer"
+              },
+              {
+                "bytes": 65536,
+                "name": "Unlabeled buffer"
+              },
+              {
+                "bytes": 65536,
+                "name": "egui_index_buffer"
+              },
+              {
+                "bytes": 65536,
+                "name": "(wgpu internal) Staging"
+              }
+            ],
+            "blocks": [
+              268435456,
+              67108864
+            ],
+            "reserved_bytes": 335544320
+          },
+          "scope": "Logical font/texture/cache sizes and backend GPU allocator report. Excludes egui font-byte clones, driver/system overhead and process heap accounting. GPU reservations are not OS process private bytes.",
+          "shaping": {
+            "atlas_rgba_bytes": 0,
+            "font_source_bytes": 15238300,
+            "font_source_capacity_bytes": 18556320,
+            "glyph_entries": 1,
+            "layout_cache_estimated_bytes": 7656,
+            "unique_font_sources": 6
+          },
+          "textures": [
+            {
+              "bytes": 0,
+              "name": "egui_font_texture",
+              "size": [
+                0,
+                0
+              ]
+            }
+          ]
+        },
+        "last": {
+          "elapsed_seconds": 28.7324199,
+          "gpu_allocator": {
+            "allocated_bytes": 19333120,
+            "allocations": [
+              {
+                "bytes": 1048576,
+                "name": "egui_texid_Managed(0)"
+              },
+              {
+                "bytes": 16777216,
+                "name": "egui_texid_Managed(1)"
+              },
+              {
+                "bytes": 65536,
+                "name": "egui_uniform_buffer"
+              },
+              {
+                "bytes": 65536,
+                "name": "Unlabeled buffer"
+              },
+              {
+                "bytes": 196608,
+                "name": "egui_vertex_buffer"
+              },
+              {
+                "bytes": 524288,
+                "name": "(wgpu internal) zero init buffer"
+              },
+              {
+                "bytes": 131072,
+                "name": "egui_index_buffer"
+              },
+              {
+                "bytes": 65536,
+                "name": "(wgpu internal) Staging"
+              },
+              {
+                "bytes": 196608,
+                "name": "(wgpu internal) Staging"
+              },
+              {
+                "bytes": 65536,
+                "name": "(wgpu internal) Staging"
+              },
+              {
+                "bytes": 196608,
+                "name": "(wgpu internal) Staging"
+              }
+            ],
+            "blocks": [
+              268435456,
+              67108864
+            ],
+            "reserved_bytes": 335544320
+          },
+          "scope": "Logical font/texture/cache sizes and backend GPU allocator report. Excludes egui font-byte clones, driver/system overhead and process heap accounting. GPU reservations are not OS process private bytes.",
+          "shaping": {
+            "atlas_rgba_bytes": 16777216,
+            "font_source_bytes": 15238300,
+            "font_source_capacity_bytes": 18556320,
+            "glyph_entries": 15,
+            "layout_cache_estimated_bytes": 588330,
+            "unique_font_sources": 6
+          },
+          "textures": [
+            {
+              "bytes": 1048576,
+              "name": "egui_font_texture",
+              "size": [
+                8192,
+                32
+              ]
+            },
+            {
+              "bytes": 16777216,
+              "name": "terminal-shaped-glyphs",
+              "size": [
+                2048,
+                2048
+              ]
+            }
+          ]
+        },
+        "samples": 29
+      },
+      {
+        "case": "memory-history-10000",
+        "first": {
+          "elapsed_seconds": 0.0133775,
+          "gpu_allocator": {
+            "allocated_bytes": 851968,
+            "allocations": [
+              {
+                "bytes": 65536,
+                "name": "egui_index_buffer"
+              },
+              {
+                "bytes": 524288,
+                "name": "(wgpu internal) zero init buffer"
+              },
+              {
+                "bytes": 65536,
+                "name": "Unlabeled buffer"
+              },
+              {
+                "bytes": 65536,
+                "name": "egui_uniform_buffer"
+              },
+              {
+                "bytes": 65536,
+                "name": "egui_vertex_buffer"
+              },
+              {
+                "bytes": 65536,
+                "name": "(wgpu internal) Staging"
+              }
+            ],
+            "blocks": [
+              268435456,
+              67108864
+            ],
+            "reserved_bytes": 335544320
+          },
+          "scope": "Logical font/texture/cache sizes and backend GPU allocator report. Excludes egui font-byte clones, driver/system overhead and process heap accounting. GPU reservations are not OS process private bytes.",
+          "shaping": {
+            "atlas_rgba_bytes": 0,
+            "font_source_bytes": 15238300,
+            "font_source_capacity_bytes": 18556320,
+            "glyph_entries": 1,
+            "layout_cache_estimated_bytes": 7656,
+            "unique_font_sources": 6
+          },
+          "textures": [
+            {
+              "bytes": 0,
+              "name": "egui_font_texture",
+              "size": [
+                0,
+                0
+              ]
+            }
+          ]
+        },
+        "last": {
+          "elapsed_seconds": 28.6626515,
+          "gpu_allocator": {
+            "allocated_bytes": 19333120,
+            "allocations": [
+              {
+                "bytes": 131072,
+                "name": "egui_index_buffer"
+              },
+              {
+                "bytes": 196608,
+                "name": "egui_vertex_buffer"
+              },
+              {
+                "bytes": 524288,
+                "name": "(wgpu internal) zero init buffer"
+              },
+              {
+                "bytes": 1048576,
+                "name": "egui_texid_Managed(0)"
+              },
+              {
+                "bytes": 16777216,
+                "name": "egui_texid_Managed(1)"
+              },
+              {
+                "bytes": 65536,
+                "name": "Unlabeled buffer"
+              },
+              {
+                "bytes": 65536,
+                "name": "egui_uniform_buffer"
+              },
+              {
+                "bytes": 65536,
+                "name": "(wgpu internal) Staging"
+              },
+              {
+                "bytes": 65536,
+                "name": "(wgpu internal) Staging"
+              },
+              {
+                "bytes": 196608,
+                "name": "(wgpu internal) Staging"
+              },
+              {
+                "bytes": 196608,
+                "name": "(wgpu internal) Staging"
+              }
+            ],
+            "blocks": [
+              268435456,
+              67108864
+            ],
+            "reserved_bytes": 335544320
+          },
+          "scope": "Logical font/texture/cache sizes and backend GPU allocator report. Excludes egui font-byte clones, driver/system overhead and process heap accounting. GPU reservations are not OS process private bytes.",
+          "shaping": {
+            "atlas_rgba_bytes": 16777216,
+            "font_source_bytes": 15238300,
+            "font_source_capacity_bytes": 18556320,
+            "glyph_entries": 15,
+            "layout_cache_estimated_bytes": 588330,
+            "unique_font_sources": 6
+          },
+          "textures": [
+            {
+              "bytes": 16777216,
+              "name": "terminal-shaped-glyphs",
+              "size": [
+                2048,
+                2048
+              ]
+            },
+            {
+              "bytes": 1048576,
+              "name": "egui_font_texture",
+              "size": [
+                8192,
+                32
+              ]
+            }
+          ]
+        },
+        "samples": 29
+      }
+    ]
+  },
+  "windows_ablation": {
+    "ci_run": 39592731811,
+    "source": "1b4f616",
+    "backend": "DX12 / Microsoft Basic Render Driver / CPU",
+    "cases": [
+      {
+        "case": "memory-gpu-compact",
+        "gpu_memory_mode": "compact",
+        "scrollback_lines": 0,
+        "completed": true,
+        "fixture_lines": 12000,
+        "binary_sha256": "91f8525ee87e65f8be50b54f36197cdc5d35c29a4303e4a973384d1049b5c95a",
+        "phases": {
+          "idle": {
+            "private_mib_median": 59.1875,
+            "private_mib_last_five_median": 59.234375,
+            "samples": 7
+          },
+          "output": {
+            "private_mib_median": 78.32421875,
+            "private_mib_last_five_median": 78.32421875,
+            "samples": 21
+          }
+        },
+        "largest_private_regions": [
+          25812992,
+          16781312,
+          13459456,
+          4194304,
+          2101248,
+          1605632
+        ],
+        "allocator_first": {
+          "elapsed_seconds": 0.0141622,
+          "gpu_allocator": {
+            "allocated_bytes": 851968,
+            "allocations": [
+              {
+                "bytes": 524288,
+                "name": "(wgpu internal) zero init buffer"
+              },
+              {
+                "bytes": 65536,
+                "name": "egui_vertex_buffer"
+              },
+              {
+                "bytes": 65536,
+                "name": "Unlabeled buffer"
+              },
+              {
+                "bytes": 65536,
+                "name": "egui_uniform_buffer"
+              },
+              {
+                "bytes": 65536,
+                "name": "egui_index_buffer"
+              },
+              {
+                "bytes": 65536,
+                "name": "(wgpu internal) Staging"
+              }
+            ],
+            "blocks": [
+              8388608,
+              4194304
+            ],
+            "reserved_bytes": 12582912
+          },
+          "gpu_memory_mode": "compact",
+          "scope": "Logical font/texture/cache sizes and backend GPU allocator report. Excludes egui font-byte clones, driver/system overhead and process heap accounting. GPU reservations are not OS process private bytes.",
+          "shaping": {
+            "atlas_rgba_bytes": 0,
+            "font_source_bytes": 15238300,
+            "font_source_capacity_bytes": 18556320,
+            "glyph_entries": 1,
+            "layout_cache_estimated_bytes": 7656,
+            "unique_font_sources": 6
+          },
+          "textures": [
+            {
+              "bytes": 0,
+              "name": "egui_font_texture",
+              "size": [
+                0,
+                0
+              ]
+            }
+          ]
+        },
+        "allocator_last": {
+          "elapsed_seconds": 28.617289,
+          "gpu_allocator": {
+            "allocated_bytes": 19333120,
+            "allocations": [
+              {
+                "bytes": 196608,
+                "name": "egui_vertex_buffer"
+              },
+              {
+                "bytes": 131072,
+                "name": "egui_index_buffer"
+              },
+              {
+                "bytes": 1048576,
+                "name": "egui_texid_Managed(0)"
+              },
+              {
+                "bytes": 524288,
+                "name": "(wgpu internal) zero init buffer"
+              },
+              {
+                "bytes": 65536,
+                "name": "Unlabeled buffer"
+              },
+              {
+                "bytes": 65536,
+                "name": "egui_uniform_buffer"
+              },
+              {
+                "bytes": 16777216,
+                "name": "egui_texid_Managed(1)"
+              },
+              {
+                "bytes": 196608,
+                "name": "(wgpu internal) Staging"
+              },
+              {
+                "bytes": 65536,
+                "name": "(wgpu internal) Staging"
+              },
+              {
+                "bytes": 196608,
+                "name": "(wgpu internal) Staging"
+              },
+              {
+                "bytes": 65536,
+                "name": "(wgpu internal) Staging"
+              }
+            ],
+            "blocks": [
+              8388608,
+              16777216,
+              4194304
+            ],
+            "reserved_bytes": 29360128
+          },
+          "gpu_memory_mode": "compact",
+          "scope": "Logical font/texture/cache sizes and backend GPU allocator report. Excludes egui font-byte clones, driver/system overhead and process heap accounting. GPU reservations are not OS process private bytes.",
+          "shaping": {
+            "atlas_rgba_bytes": 16777216,
+            "font_source_bytes": 15238300,
+            "font_source_capacity_bytes": 18556320,
+            "glyph_entries": 15,
+            "layout_cache_estimated_bytes": 588330,
+            "unique_font_sources": 6
+          },
+          "textures": [
+            {
+              "bytes": 1048576,
+              "name": "egui_font_texture",
+              "size": [
+                8192,
+                32
+              ]
+            },
+            {
+              "bytes": 16777216,
+              "name": "terminal-shaped-glyphs",
+              "size": [
+                2048,
+                2048
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "case": "memory-gpu-memory",
+        "gpu_memory_mode": "memory",
+        "scrollback_lines": 0,
+        "completed": true,
+        "fixture_lines": 12000,
+        "binary_sha256": "91f8525ee87e65f8be50b54f36197cdc5d35c29a4303e4a973384d1049b5c95a",
+        "phases": {
+          "idle": {
+            "private_mib_median": 119.6640625,
+            "private_mib_last_five_median": 119.55859375,
+            "samples": 7
+          },
+          "output": {
+            "private_mib_median": 138.91796875,
+            "private_mib_last_five_median": 138.91796875,
+            "samples": 21
+          }
+        },
+        "largest_private_regions": [
+          64000000,
+          25747456,
+          16781312,
+          13459456,
+          4194304,
+          2101248,
+          1781760,
+          1613824
+        ],
+        "allocator_first": {
+          "elapsed_seconds": 0.0131592,
+          "gpu_allocator": {
+            "allocated_bytes": 851968,
+            "allocations": [
+              {
+                "bytes": 65536,
+                "name": "egui_uniform_buffer"
+              },
+              {
+                "bytes": 65536,
+                "name": "egui_vertex_buffer"
+              },
+              {
+                "bytes": 65536,
+                "name": "egui_index_buffer"
+              },
+              {
+                "bytes": 65536,
+                "name": "Unlabeled buffer"
+              },
+              {
+                "bytes": 524288,
+                "name": "(wgpu internal) zero init buffer"
+              },
+              {
+                "bytes": 65536,
+                "name": "(wgpu internal) Staging"
+              }
+            ],
+            "blocks": [
+              8388608,
+              4194304
+            ],
+            "reserved_bytes": 12582912
+          },
+          "gpu_memory_mode": "memory",
+          "scope": "Logical font/texture/cache sizes and backend GPU allocator report. Excludes egui font-byte clones, driver/system overhead and process heap accounting. GPU reservations are not OS process private bytes.",
+          "shaping": {
+            "atlas_rgba_bytes": 0,
+            "font_source_bytes": 15238300,
+            "font_source_capacity_bytes": 18556320,
+            "glyph_entries": 1,
+            "layout_cache_estimated_bytes": 7656,
+            "unique_font_sources": 6
+          },
+          "textures": [
+            {
+              "bytes": 0,
+              "name": "egui_font_texture",
+              "size": [
+                0,
+                0
+              ]
+            }
+          ]
+        },
+        "allocator_last": {
+          "elapsed_seconds": 28.4249303,
+          "gpu_allocator": {
+            "allocated_bytes": 19398656,
+            "allocations": [
+              {
+                "bytes": 65536,
+                "name": "egui_uniform_buffer"
+              },
+              {
+                "bytes": 131072,
+                "name": "egui_index_buffer"
+              },
+              {
+                "bytes": 524288,
+                "name": "(wgpu internal) zero init buffer"
+              },
+              {
+                "bytes": 1048576,
+                "name": "egui_texid_Managed(0)"
+              },
+              {
+                "bytes": 65536,
+                "name": "Unlabeled buffer"
+              },
+              {
+                "bytes": 196608,
+                "name": "egui_vertex_buffer"
+              },
+              {
+                "bytes": 16777216,
+                "name": "egui_texid_Managed(1)"
+              },
+              {
+                "bytes": 65536,
+                "name": "(wgpu internal) Staging"
+              },
+              {
+                "bytes": 196608,
+                "name": "(wgpu internal) Staging"
+              },
+              {
+                "bytes": 196608,
+                "name": "(wgpu internal) Staging"
+              },
+              {
+                "bytes": 65536,
+                "name": "(wgpu internal) Staging"
+              },
+              {
+                "bytes": 65536,
+                "name": "(wgpu internal) Staging"
+              }
+            ],
+            "blocks": [
+              8388608,
+              16777216,
+              4194304
+            ],
+            "reserved_bytes": 29360128
+          },
+          "gpu_memory_mode": "memory",
+          "scope": "Logical font/texture/cache sizes and backend GPU allocator report. Excludes egui font-byte clones, driver/system overhead and process heap accounting. GPU reservations are not OS process private bytes.",
+          "shaping": {
+            "atlas_rgba_bytes": 16777216,
+            "font_source_bytes": 15238300,
+            "font_source_capacity_bytes": 18556320,
+            "glyph_entries": 15,
+            "layout_cache_estimated_bytes": 588330,
+            "unique_font_sources": 6
+          },
+          "textures": [
+            {
+              "bytes": 16777216,
+              "name": "terminal-shaped-glyphs",
+              "size": [
+                2048,
+                2048
+              ]
+            },
+            {
+              "bytes": 1048576,
+              "name": "egui_font_texture",
+              "size": [
+                8192,
+                32
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "case": "memory-history-0",
+        "gpu_memory_mode": "default",
+        "scrollback_lines": 0,
+        "completed": true,
+        "fixture_lines": 12000,
+        "binary_sha256": "91f8525ee87e65f8be50b54f36197cdc5d35c29a4303e4a973384d1049b5c95a",
+        "phases": {
+          "idle": {
+            "private_mib_median": 428.9140625,
+            "private_mib_last_five_median": 428.9140625,
+            "samples": 7
+          },
+          "output": {
+            "private_mib_median": 431.34375,
+            "private_mib_last_five_median": 431.34765625,
+            "samples": 21
+          }
+        },
+        "largest_private_regions": [
+          268435456,
+          67108864,
+          64000000,
+          16781312,
+          13459456,
+          2101248,
+          2093056,
+          1916928
+        ],
+        "allocator_first": {
+          "elapsed_seconds": 0.0124887,
+          "gpu_allocator": {
+            "allocated_bytes": 851968,
+            "allocations": [
+              {
+                "bytes": 524288,
+                "name": "(wgpu internal) zero init buffer"
+              },
+              {
+                "bytes": 65536,
+                "name": "egui_vertex_buffer"
+              },
+              {
+                "bytes": 65536,
+                "name": "Unlabeled buffer"
+              },
+              {
+                "bytes": 65536,
+                "name": "egui_index_buffer"
+              },
+              {
+                "bytes": 65536,
+                "name": "egui_uniform_buffer"
+              },
+              {
+                "bytes": 65536,
+                "name": "(wgpu internal) Staging"
+              }
+            ],
+            "blocks": [
+              268435456,
+              67108864
+            ],
+            "reserved_bytes": 335544320
+          },
+          "gpu_memory_mode": "default",
+          "scope": "Logical font/texture/cache sizes and backend GPU allocator report. Excludes egui font-byte clones, driver/system overhead and process heap accounting. GPU reservations are not OS process private bytes.",
+          "shaping": {
+            "atlas_rgba_bytes": 0,
+            "font_source_bytes": 15238300,
+            "font_source_capacity_bytes": 18556320,
+            "glyph_entries": 1,
+            "layout_cache_estimated_bytes": 7656,
+            "unique_font_sources": 6
+          },
+          "textures": [
+            {
+              "bytes": 0,
+              "name": "egui_font_texture",
+              "size": [
+                0,
+                0
+              ]
+            }
+          ]
+        },
+        "allocator_last": {
+          "elapsed_seconds": 28.5566262,
+          "gpu_allocator": {
+            "allocated_bytes": 19333120,
+            "allocations": [
+              {
+                "bytes": 524288,
+                "name": "(wgpu internal) zero init buffer"
+              },
+              {
+                "bytes": 131072,
+                "name": "egui_index_buffer"
+              },
+              {
+                "bytes": 16777216,
+                "name": "egui_texid_Managed(1)"
+              },
+              {
+                "bytes": 1048576,
+                "name": "egui_texid_Managed(0)"
+              },
+              {
+                "bytes": 65536,
+                "name": "egui_uniform_buffer"
+              },
+              {
+                "bytes": 65536,
+                "name": "Unlabeled buffer"
+              },
+              {
+                "bytes": 196608,
+                "name": "egui_vertex_buffer"
+              },
+              {
+                "bytes": 65536,
+                "name": "(wgpu internal) Staging"
+              },
+              {
+                "bytes": 65536,
+                "name": "(wgpu internal) Staging"
+              },
+              {
+                "bytes": 196608,
+                "name": "(wgpu internal) Staging"
+              },
+              {
+                "bytes": 196608,
+                "name": "(wgpu internal) Staging"
+              }
+            ],
+            "blocks": [
+              268435456,
+              67108864
+            ],
+            "reserved_bytes": 335544320
+          },
+          "gpu_memory_mode": "default",
+          "scope": "Logical font/texture/cache sizes and backend GPU allocator report. Excludes egui font-byte clones, driver/system overhead and process heap accounting. GPU reservations are not OS process private bytes.",
+          "shaping": {
+            "atlas_rgba_bytes": 16777216,
+            "font_source_bytes": 15238300,
+            "font_source_capacity_bytes": 18556320,
+            "glyph_entries": 15,
+            "layout_cache_estimated_bytes": 588330,
+            "unique_font_sources": 6
+          },
+          "textures": [
+            {
+              "bytes": 16777216,
+              "name": "terminal-shaped-glyphs",
+              "size": [
+                2048,
+                2048
+              ]
+            },
+            {
+              "bytes": 1048576,
+              "name": "egui_font_texture",
+              "size": [
+                8192,
+                32
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "case": "memory-history-10000",
+        "gpu_memory_mode": "default",
+        "scrollback_lines": 10000,
+        "completed": true,
+        "fixture_lines": 12000,
+        "binary_sha256": "91f8525ee87e65f8be50b54f36197cdc5d35c29a4303e4a973384d1049b5c95a",
+        "phases": {
+          "idle": {
+            "private_mib_median": 428.26171875,
+            "private_mib_last_five_median": 428.26171875,
+            "samples": 7
+          },
+          "output": {
+            "private_mib_median": 452.7265625,
+            "private_mib_last_five_median": 461.85546875,
+            "samples": 21
+          }
+        },
+        "largest_private_regions": [
+          268435456,
+          67108864,
+          64000000,
+          16781312,
+          13459456,
+          3219456,
+          2101248,
+          2093056
+        ],
+        "allocator_first": {
+          "elapsed_seconds": 0.0128833,
+          "gpu_allocator": {
+            "allocated_bytes": 851968,
+            "allocations": [
+              {
+                "bytes": 65536,
+                "name": "egui_index_buffer"
+              },
+              {
+                "bytes": 65536,
+                "name": "Unlabeled buffer"
+              },
+              {
+                "bytes": 524288,
+                "name": "(wgpu internal) zero init buffer"
+              },
+              {
+                "bytes": 65536,
+                "name": "egui_vertex_buffer"
+              },
+              {
+                "bytes": 65536,
+                "name": "egui_uniform_buffer"
+              },
+              {
+                "bytes": 65536,
+                "name": "(wgpu internal) Staging"
+              }
+            ],
+            "blocks": [
+              268435456,
+              67108864
+            ],
+            "reserved_bytes": 335544320
+          },
+          "gpu_memory_mode": "default",
+          "scope": "Logical font/texture/cache sizes and backend GPU allocator report. Excludes egui font-byte clones, driver/system overhead and process heap accounting. GPU reservations are not OS process private bytes.",
+          "shaping": {
+            "atlas_rgba_bytes": 0,
+            "font_source_bytes": 15238300,
+            "font_source_capacity_bytes": 18556320,
+            "glyph_entries": 1,
+            "layout_cache_estimated_bytes": 7656,
+            "unique_font_sources": 6
+          },
+          "textures": [
+            {
+              "bytes": 0,
+              "name": "egui_font_texture",
+              "size": [
+                0,
+                0
+              ]
+            }
+          ]
+        },
+        "allocator_last": {
+          "elapsed_seconds": 28.5087948,
+          "gpu_allocator": {
+            "allocated_bytes": 19267584,
+            "allocations": [
+              {
+                "bytes": 65536,
+                "name": "Unlabeled buffer"
+              },
+              {
+                "bytes": 65536,
+                "name": "egui_uniform_buffer"
+              },
+              {
+                "bytes": 65536,
+                "name": "egui_index_buffer"
+              },
+              {
+                "bytes": 16777216,
+                "name": "egui_texid_Managed(1)"
+              },
+              {
+                "bytes": 524288,
+                "name": "(wgpu internal) zero init buffer"
+              },
+              {
+                "bytes": 196608,
+                "name": "egui_vertex_buffer"
+              },
+              {
+                "bytes": 1048576,
+                "name": "egui_texid_Managed(0)"
+              },
+              {
+                "bytes": 65536,
+                "name": "(wgpu internal) Staging"
+              },
+              {
+                "bytes": 65536,
+                "name": "(wgpu internal) Staging"
+              },
+              {
+                "bytes": 196608,
+                "name": "(wgpu internal) Staging"
+              },
+              {
+                "bytes": 196608,
+                "name": "(wgpu internal) Staging"
+              }
+            ],
+            "blocks": [
+              268435456,
+              67108864
+            ],
+            "reserved_bytes": 335544320
+          },
+          "gpu_memory_mode": "default",
+          "scope": "Logical font/texture/cache sizes and backend GPU allocator report. Excludes egui font-byte clones, driver/system overhead and process heap accounting. GPU reservations are not OS process private bytes.",
+          "shaping": {
+            "atlas_rgba_bytes": 16777216,
+            "font_source_bytes": 15238300,
+            "font_source_capacity_bytes": 18556320,
+            "glyph_entries": 15,
+            "layout_cache_estimated_bytes": 581796,
+            "unique_font_sources": 6
+          },
+          "textures": [
+            {
+              "bytes": 1048576,
+              "name": "egui_font_texture",
+              "size": [
+                8192,
+                32
+              ]
+            },
+            {
+              "bytes": 16777216,
+              "name": "terminal-shaped-glyphs",
+              "size": [
+                2048,
+                2048
+              ]
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

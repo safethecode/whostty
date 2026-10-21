@@ -3,8 +3,8 @@
 Example (PowerShell):
   python scripts/windows-soak.py --exe C:/path/to/whostty.exe --duration 1800
 
-The dedicated GUI remains open after success. Close it after inspecting the
-result. A stop file in the output directory requests graceful fixture shutdown.
+The dedicated GUI remains open after success unless --close-on-success is set.
+A stop file in the output directory requests graceful fixture shutdown.
 Progress and resource samples are proxies: they do not measure GPU frames,
 rendered output correctness, IME behavior, or physical input-to-display latency.
 """
@@ -555,6 +555,7 @@ def run_monitor(args):
                   "No GPU frame, visual correctness, IME, or physical input-to-display latency measurement.",
                   "CPU percent uses one logical core as 100%; multi-threaded values can exceed 100%.",
                   "Memory trends are observations, not a leak verdict; desktop load is not isolated.",
+                  "Owned GUI is closed after completion." if args.close_on_success else
                   "Successful completion leaves the dedicated GUI open; close it after inspection."]}
     atomic_json(directory / "report.json", report)
     print(json.dumps(report, ensure_ascii=False), flush=True)

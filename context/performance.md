@@ -1,5 +1,9 @@
 # 재현 가능한 성능 측정
 
+2026-10-21의 [메모리 원인 분석과 Ghostty 실측 비교](memory-and-ghostty-2026-10-21.md)는
+아래 초기 microbenchmark와 별도로 실제 Mac GUI·Windows 배포본을 측정한다. Mac의 동일 그리드·동일 출력·
+백그라운드 상태에서 CPU/메모리/PTY 파서 처리를 비교하며, GPU 표시 완료나 Windows RTX 장비의 동등성으로 해석하지 않는다.
+
 실행:
 
 ```powershell
