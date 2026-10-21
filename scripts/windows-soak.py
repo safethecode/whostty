@@ -3,8 +3,8 @@
 Example (PowerShell):
   python scripts/windows-soak.py --exe C:/path/to/whostty.exe --duration 1800
 
-The dedicated GUI remains open after success. Close it after inspecting the
-result. A stop file in the output directory requests graceful fixture shutdown.
+The dedicated GUI remains open after success unless --close-on-success is set.
+A stop file in the output directory requests graceful fixture shutdown.
 Progress and resource samples are proxies: they do not measure GPU frames,
 rendered output correctness, IME behavior, or physical input-to-display latency.
 """
@@ -54,6 +54,12 @@ def parse_args(argv=None):
     parser.add_argument("--shutdown-seconds", type=bounded_number(1, 120), default=10.0)
     parser.add_argument("--alternate-interval", type=bounded_number(0, 3600), default=10.0,
                         help="seconds between normal/alternate screen switches; 0 disables")
+    parser.add_argument("--scrollback", type=bounded_number(0, 100000, True), default=10000)
+    parser.add_argument("--no-ligatures", action="store_true", help="disable OpenType ligatures for a controlled comparison")
+    parser.add_argument("--idle-seconds", type=bounded_number(0, 300), default=0.0,
+                        help="record a quiet baseline before starting paced output")
+    parser.add_argument("--memory-map", action="store_true", help="capture committed region summaries (not heap contents)")
+    parser.add_argument("--close-on-success", action="store_true", help="close only this owned GUI after recording completion")
     parser.add_argument("--child", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--token", help=argparse.SUPPRESS)
     args = parser.parse_args(argv)
@@ -111,6 +117,18 @@ def run_child(args):
         status["lines"] += lines
 
     heartbeat()
+    if args.idle_seconds:
+        status["phase"] = "idle"
+        idle_started = time.monotonic()
+        while time.monotonic() - idle_started < args.idle_seconds:
+            if (directory / "stop").exists():
+                status.update(state="completed", reason="stop_requested", exit_code=0)
+                heartbeat()
+                return 0
+            heartbeat()
+            time.sleep(0.25)
+        start = time.monotonic()
+    status["phase"] = "output"
     batch_lines = max(1, int(args.lines_per_second * 0.05))
     period = batch_lines / args.lines_per_second
     deadline = start
@@ -219,6 +237,44 @@ class ProcessReader:
         finally:
             self.kernel.CloseHandle(snapshot)
         return count
+
+    def memory_map(self):
+        """VirtualQueryEx region metadata, not allocation stacks or GPU residency."""
+        if ctypes.sizeof(ctypes.c_void_p) != 8:
+            raise OSError("memory region capture requires 64-bit Python")
+
+        class Region(ctypes.Structure):
+            _fields_ = [("base", ctypes.c_void_p), ("allocation_base", ctypes.c_void_p),
+                        ("allocation_protect", ctypes.c_uint32), ("partition", ctypes.c_uint16),
+                        ("size", ctypes.c_size_t), ("state", ctypes.c_uint32),
+                        ("protect", ctypes.c_uint32), ("kind", ctypes.c_uint32)]
+        self.kernel.VirtualQueryEx.argtypes = [wintypes.HANDLE, ctypes.c_void_p,
+                                             ctypes.POINTER(Region), ctypes.c_size_t]
+        self.kernel.VirtualQueryEx.restype = ctypes.c_size_t
+        totals = {"private": 0, "mapped": 0, "image": 0, "other": 0}
+        largest = []
+        address = 0
+        count = 0
+        while address < 0x800000000000:
+            region = Region()
+            found = self.kernel.VirtualQueryEx(self.handle, address, ctypes.byref(region), ctypes.sizeof(region))
+            if not found:
+                if ctypes.get_last_error() == 87:  # ERROR_INVALID_PARAMETER: end of address space
+                    break
+                raise ctypes.WinError(ctypes.get_last_error())
+            end = (region.base or 0) + region.size
+            if end <= address:
+                raise OSError("VirtualQueryEx made no progress")
+            address = end
+            if region.state == 0x1000:  # MEM_COMMIT
+                kind = {0x20000: "private", 0x40000: "mapped", 0x1000000: "image"}.get(region.kind, "other")
+                totals[kind] += region.size
+                count += 1
+                largest.append({"base": region.base, "bytes": region.size, "type": kind,
+                                "protect": region.protect, "allocation_base": region.allocation_base})
+        return {"committed_bytes_by_type": totals, "committed_regions": count,
+                "largest_regions": sorted(largest, key=lambda item: item["bytes"], reverse=True)[:32],
+                "scope": "Committed virtual regions; not resident bytes, heap attribution or GPU allocations. Mapping can change during enumeration."}
 
     def sample(self):
         alive = self.kernel.WaitForSingleObject(self.handle, 0) == 258  # WAIT_TIMEOUT
@@ -349,13 +405,14 @@ def run_monitor(args):
         directory = args.output.resolve()
         directory.mkdir(parents=True, exist_ok=False)
     config = directory / "config.toml"
-    config.write_text("# Isolated soak configuration; never the user's config.\nfont_size = 15.0\nscrollback = 10000\n", encoding="utf-8")
+    config.write_text("# Isolated soak configuration; never the user's config.\nfont_size = 15.0\n"
+                      f"scrollback = {args.scrollback}\nfont_ligatures = {str(not args.no_ligatures).lower()}\n", encoding="utf-8")
     token = uuid.uuid4().hex
     command = [str(executable), "--config", str(config), "-d", str(directory), "-e",
                sys.executable, "-u", str(Path(__file__).resolve()), "--child", "--output", str(directory),
                "--token", token, "--duration", str(args.duration),
                "--lines-per-second", str(args.lines_per_second),
-               "--alternate-interval", str(args.alternate_interval)]
+               "--alternate-interval", str(args.alternate_interval), "--idle-seconds", str(args.idle_seconds)]
     start = time.monotonic()
     samples = []
     errors = []
@@ -367,17 +424,25 @@ def run_monitor(args):
     reason = "startup_timeout"
     cleanup = None
     fixture_exit_code = None
+    memory_maps = {}
+    app_alive_at_completion = False
     metadata = {"schema_version": 1, "started_unix_seconds": time.time(), "command": command,
                 "binary_sha256": hashlib.sha256(executable.read_bytes()).hexdigest(),
                 "fixture_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
                 "python_version": sys.version, "platform": platform.platform(),
                 "duration_seconds": args.duration, "lines_per_second": args.lines_per_second,
                 "sample_seconds": args.sample_seconds, "warmup_seconds": args.warmup_seconds,
-                "stall_seconds": args.stall_seconds, "logical_cpu_count": os.cpu_count()}
+                "stall_seconds": args.stall_seconds, "logical_cpu_count": os.cpu_count(),
+                "scrollback_lines": args.scrollback, "font_ligatures": not args.no_ligatures,
+                "idle_seconds": args.idle_seconds, "wgpu_backend_override": os.environ.get("WGPU_BACKEND")}
+    metadata["gpu_memory_mode"] = os.environ.get("WHOSTTY_GPU_MEMORY_MODE", "default")
     atomic_json(directory / "run.json", metadata)
     try:
         with (directory / "app.log").open("wb") as log, (directory / "samples.jsonl").open("w", encoding="utf-8") as journal:
-            app = subprocess.Popen(command, stdout=log, stderr=log)
+            environment = os.environ.copy()
+            if args.memory_map:
+                environment["WHOSTTY_MEMORY_LOG"] = str(directory / "allocator.jsonl")
+            app = subprocess.Popen(command, stdout=log, stderr=log, env=environment)
             app_reader = ProcessReader(app.pid)
             print(json.dumps({"event": "started", "app_pid": app.pid, "output": str(directory)}), flush=True)
             next_sample = time.monotonic()
@@ -399,10 +464,16 @@ def run_monitor(args):
                           "progress": status,
                           "heartbeat_age_seconds": time.time() - status["updated_unix_seconds"] if status else None}
                 samples.append(sample)
+                if args.memory_map and status:
+                    phase = "completed" if status["state"] == "completed" else status.get("phase", "output")
+                    idle_ready = phase != "idle" or elapsed >= min(5, args.idle_seconds / 2)
+                    if phase not in memory_maps and idle_ready:
+                        memory_maps[phase] = app_reader.memory_map()
+                        atomic_json(directory / "memory-maps.json", memory_maps)
                 journal.write(json.dumps(sample, ensure_ascii=False) + "\n")
                 journal.flush()
                 if status is not None:
-                    stalled = watch.observe(elapsed, status)
+                    stalled = status.get("phase") != "idle" and watch.observe(elapsed, status)
                     if status["state"] in ("completed", "failed"):
                         reason = "fixture_completed" if status["state"] == "completed" else "fixture_failed"
                         break
@@ -418,7 +489,7 @@ def run_monitor(args):
                 if status is None and elapsed >= args.startup_seconds:
                     reason = "startup_timeout"
                     break
-                if elapsed >= args.duration + args.startup_seconds + args.shutdown_seconds:
+                if elapsed >= args.duration + args.idle_seconds + args.startup_seconds + args.shutdown_seconds:
                     reason = "duration_timeout"
                     break
                 if (directory / "stop").exists():
@@ -455,10 +526,11 @@ def run_monitor(args):
             app_reader.close()
         if reason == "fixture_completed" and fixture_exit_code != 0:
             reason = "fixture_exit_unconfirmed"
+        app_alive_at_completion = app is not None and app.poll() is None
         if reason == "fixture_completed" and app.poll() is not None:
             reason = "app_exited_at_completion"
         # A successful run leaves the dedicated GUI available for visual inspection.
-        if app is not None and reason != "fixture_completed":
+        if app is not None and (reason != "fixture_completed" or args.close_on_success):
             cleanup = stop_owned_tree(app)
 
     completed = bool(reason == "fixture_completed" and fixture_exit_code == 0 and status and status["exit_code"] == 0
@@ -466,6 +538,7 @@ def run_monitor(args):
                      and status["elapsed_seconds"] >= args.duration and not watch.stalls)
     report = {**metadata, "output": str(directory), "completed": completed, "reason": reason,
               "elapsed_seconds": time.monotonic() - start, "app_pid": app.pid if app else None,
+              "app_alive_at_completion": app_alive_at_completion,
               "child_pid": status["pid"] if status else None,
               "app_alive_at_report": app is not None and app.poll() is None,
               "app_exit_code": app.poll() if app else None, "fixture_exit_code": fixture_exit_code, "fixture": status,
@@ -476,11 +549,13 @@ def run_monitor(args):
                   "maximum_observed_gap_seconds": watch.max_gap_seconds, "stalls": watch.stalls},
               "resources": {name: resource_summary(samples, name, args.warmup_seconds)
                             for name in ["app", "child"]},
+              "memory_maps": memory_maps,
               "limitations": ["Flushed child writes and OS process metrics are progress proxies.",
                   "Byte counters count UTF-8 fixture payload before any ConPTY transformation.",
                   "No GPU frame, visual correctness, IME, or physical input-to-display latency measurement.",
                   "CPU percent uses one logical core as 100%; multi-threaded values can exceed 100%.",
                   "Memory trends are observations, not a leak verdict; desktop load is not isolated.",
+                  "Owned GUI is closed after completion." if args.close_on_success else
                   "Successful completion leaves the dedicated GUI open; close it after inspection."]}
     atomic_json(directory / "report.json", report)
     print(json.dumps(report, ensure_ascii=False), flush=True)

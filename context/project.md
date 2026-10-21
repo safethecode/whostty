@@ -1,5 +1,15 @@
 # Whostty 작업 맥락
 
+## 2026-10-21 메모리 분석과 Ghostty 비교
+
+[분석 기록](memory-and-ghostty-2026-10-21.md)과 [측정 요약](performance-comparison-2026-10-21.json)에 근거를 남겼다.
+Windows DX12 소프트웨어 어댑터에서 큰 기본 GPU 풀/descriptor 비용을 재현했고, opt-in MemoryUsage/compact
+대조로 출력 중 PrivateUsage 431→139→78MiB를 관측했다. 제품 기본 GPU 설정을 바꾼 것은 아니다.
+Mac의 같은 그리드·백그라운드 출력 3회 비교에서 footprint 중앙값은 Whostty 426MiB/Ghostty 80MiB였으며,
+Mac 전체 TTC 폰트 버퍼의 중복도 allocation 스택으로 확인했다. 원래 RTX 장비의 500MiB와 수치를 동일시하지 않는다.
+
+## 기존 작업 맥락
+
 - Windows용 독립 네이티브 터미널. Electron이나 웹뷰를 사용하지 않는다.
 - Ghostty 수준의 완성도를 장기 목표로 삼지만, 초기 버전이 동등한 기능·성능을 달성했다고 주장하지 않는다.
 - Ghostty 코드를 가져오는 포크가 아니다. Rust, Alacritty 터미널 에뮬레이터, portable-pty의 Windows ConPTY, wgpu GPU 렌더러를 사용한다.

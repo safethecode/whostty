@@ -291,6 +291,7 @@ pub struct CheckApp {
     requested: bool,
     latency: Option<LatencyProbe>,
     done: bool,
+    device: Option<eframe::wgpu::Device>,
 }
 
 impl CheckApp {
@@ -338,6 +339,10 @@ impl CheckApp {
             requested: false,
             latency: samples.map(LatencyProbe::new),
             done: false,
+            device: cc
+                .wgpu_render_state
+                .as_ref()
+                .map(|state| state.device.clone()),
         })
     }
 
@@ -401,6 +406,7 @@ impl CheckApp {
         report["colored_pixels"] = json!(colored);
         report["elapsed_ms"] = json!(self.started.elapsed().as_millis());
         report["error"] = json!(error);
+        report["memory"] = crate::memory::report(ctx, self.device.as_ref());
         if let Some(probe) = &self.latency {
             report["latency"] = probe.report();
         }
