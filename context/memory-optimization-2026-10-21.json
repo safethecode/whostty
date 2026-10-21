@@ -1,0 +1,767 @@
+{
+  "schema_version": 1,
+  "measured_on": "2026-10-21",
+  "product_code_commit": "6553c25739e8eca2c09dc24ae9a46d7b7f188eae",
+  "windows": {
+    "adapter": "Microsoft Basic Render Driver / Dx12 / Cpu",
+    "baseline_ci_run": 39592731811,
+    "optimized_ci_run": 39600558205,
+    "scope": "Independent Windows CI VMs; same fixed 8s idle + 20s/600 lines per second fixture, not the original RTX machine. Default cases both complete 12000 lines; diagnostic mode counts are recorded separately.",
+    "before": {
+      "memory-history-0": {
+        "binary_sha256": "91f8525ee87e65f8be50b54f36197cdc5d35c29a4303e4a973384d1049b5c95a",
+        "fixture_sha256": "fe1e0ca29ed2edac07c69e6ae231315d2f8a6a87156a36e790dc6a8907cf4d15",
+        "completed": true,
+        "fixture_exit_code": 0,
+        "app_alive_at_completion": true,
+        "scrollback_lines": 0,
+        "gpu_memory_mode": "default",
+        "fixture_lines": 12000,
+        "fixture_bytes": 1488004,
+        "private_bytes": {
+          "available": true,
+          "samples": 28,
+          "warmup_seconds": 2.0,
+          "window_seconds": 9.0,
+          "early_median_bytes": 449869824.0,
+          "late_median_bytes": 452300800,
+          "median_delta_bytes": 2430976.0,
+          "slope_bytes_per_second": 154926.46398297633,
+          "minimum_bytes": 447877120,
+          "maximum_bytes": 454041600
+        },
+        "end_shaping": {
+          "atlas_rgba_bytes": 16777216,
+          "font_source_bytes": 15238300,
+          "font_source_capacity_bytes": 18556320,
+          "glyph_entries": 15,
+          "layout_cache_estimated_bytes": 588330,
+          "unique_font_sources": 6
+        },
+        "end_gpu_allocated_bytes": 19333120,
+        "end_gpu_reserved_bytes": 335544320,
+        "peak_gpu_reserved_bytes": 335544320
+      },
+      "memory-history-10000": {
+        "binary_sha256": "91f8525ee87e65f8be50b54f36197cdc5d35c29a4303e4a973384d1049b5c95a",
+        "fixture_sha256": "fe1e0ca29ed2edac07c69e6ae231315d2f8a6a87156a36e790dc6a8907cf4d15",
+        "completed": true,
+        "fixture_exit_code": 0,
+        "app_alive_at_completion": true,
+        "scrollback_lines": 10000,
+        "gpu_memory_mode": "default",
+        "fixture_lines": 12000,
+        "fixture_bytes": 1488004,
+        "private_bytes": {
+          "available": true,
+          "samples": 28,
+          "warmup_seconds": 2.0,
+          "window_seconds": 8.99466666666666,
+          "early_median_bytes": 449114112.0,
+          "late_median_bytes": 484159488.0,
+          "median_delta_bytes": 35045376.0,
+          "slope_bytes_per_second": 1633361.8062071803,
+          "minimum_bytes": 449015808,
+          "maximum_bytes": 484290560
+        },
+        "end_shaping": {
+          "atlas_rgba_bytes": 16777216,
+          "font_source_bytes": 15238300,
+          "font_source_capacity_bytes": 18556320,
+          "glyph_entries": 15,
+          "layout_cache_estimated_bytes": 581796,
+          "unique_font_sources": 6
+        },
+        "end_gpu_allocated_bytes": 19267584,
+        "end_gpu_reserved_bytes": 335544320,
+        "peak_gpu_reserved_bytes": 335544320
+      },
+      "memory-gpu-memory": {
+        "binary_sha256": "91f8525ee87e65f8be50b54f36197cdc5d35c29a4303e4a973384d1049b5c95a",
+        "fixture_sha256": "fe1e0ca29ed2edac07c69e6ae231315d2f8a6a87156a36e790dc6a8907cf4d15",
+        "completed": true,
+        "fixture_exit_code": 0,
+        "app_alive_at_completion": true,
+        "scrollback_lines": 0,
+        "gpu_memory_mode": "memory",
+        "fixture_lines": 12000,
+        "fixture_bytes": 1488004,
+        "private_bytes": {
+          "available": true,
+          "samples": 28,
+          "warmup_seconds": 2.0,
+          "window_seconds": 9.0,
+          "early_median_bytes": 125767680,
+          "late_median_bytes": 146333696,
+          "median_delta_bytes": 20566016,
+          "slope_bytes_per_second": 663376.6927544485,
+          "minimum_bytes": 125358080,
+          "maximum_bytes": 163471360
+        },
+        "end_shaping": {
+          "atlas_rgba_bytes": 16777216,
+          "font_source_bytes": 15238300,
+          "font_source_capacity_bytes": 18556320,
+          "glyph_entries": 15,
+          "layout_cache_estimated_bytes": 588330,
+          "unique_font_sources": 6
+        },
+        "end_gpu_allocated_bytes": 19398656,
+        "end_gpu_reserved_bytes": 29360128,
+        "peak_gpu_reserved_bytes": 29360128
+      }
+    },
+    "after": {
+      "memory-history-0": {
+        "binary_sha256": "daf1504b8868593518c6bfe006ab345d766fe0f3689f189f2b3ee3a671fea4f7",
+        "fixture_sha256": "c955720a1fc6f8e6df25ebfbb8d8a6f809e406f1db413f7625cfc76bfdc06ffb",
+        "completed": true,
+        "fixture_exit_code": 0,
+        "app_alive_at_completion": true,
+        "scrollback_lines": 0,
+        "gpu_memory_mode": "compact",
+        "fixture_lines": 12000,
+        "fixture_bytes": 1488004,
+        "private_bytes": {
+          "available": true,
+          "samples": 28,
+          "warmup_seconds": 2.0,
+          "window_seconds": 9.0,
+          "early_median_bytes": 58142720,
+          "late_median_bytes": 61235200.0,
+          "median_delta_bytes": 3092480.0,
+          "slope_bytes_per_second": 111130.37677351544,
+          "minimum_bytes": 57135104,
+          "maximum_bytes": 62283776
+        },
+        "end_shaping": {
+          "atlas_pages": 1,
+          "atlas_rgba_bytes": 1048576,
+          "font_source_bytes": 15238300,
+          "font_source_capacity_bytes": 15238300,
+          "glyph_entries": 15,
+          "layout_cache_estimated_bytes": 588330,
+          "unique_font_sources": 6
+        },
+        "end_gpu_allocated_bytes": 3604480,
+        "end_gpu_reserved_bytes": 12582912,
+        "peak_gpu_reserved_bytes": 12582912
+      },
+      "memory-history-10000": {
+        "binary_sha256": "daf1504b8868593518c6bfe006ab345d766fe0f3689f189f2b3ee3a671fea4f7",
+        "fixture_sha256": "c955720a1fc6f8e6df25ebfbb8d8a6f809e406f1db413f7625cfc76bfdc06ffb",
+        "completed": true,
+        "fixture_exit_code": 0,
+        "app_alive_at_completion": true,
+        "scrollback_lines": 10000,
+        "gpu_memory_mode": "compact",
+        "fixture_lines": 12000,
+        "fixture_bytes": 1488004,
+        "private_bytes": {
+          "available": true,
+          "samples": 28,
+          "warmup_seconds": 2.0,
+          "window_seconds": 9.00533333333332,
+          "early_median_bytes": 59099136.0,
+          "late_median_bytes": 91287552,
+          "median_delta_bytes": 32188416.0,
+          "slope_bytes_per_second": 1526440.4420791364,
+          "minimum_bytes": 57176064,
+          "maximum_bytes": 91754496
+        },
+        "end_shaping": {
+          "atlas_pages": 1,
+          "atlas_rgba_bytes": 1048576,
+          "font_source_bytes": 15238300,
+          "font_source_capacity_bytes": 15238300,
+          "glyph_entries": 15,
+          "layout_cache_estimated_bytes": 588330,
+          "unique_font_sources": 6
+        },
+        "end_gpu_allocated_bytes": 3604480,
+        "end_gpu_reserved_bytes": 12582912,
+        "peak_gpu_reserved_bytes": 12582912
+      },
+      "memory-gpu-memory": {
+        "binary_sha256": "daf1504b8868593518c6bfe006ab345d766fe0f3689f189f2b3ee3a671fea4f7",
+        "fixture_sha256": "c955720a1fc6f8e6df25ebfbb8d8a6f809e406f1db413f7625cfc76bfdc06ffb",
+        "completed": true,
+        "fixture_exit_code": 0,
+        "app_alive_at_completion": true,
+        "scrollback_lines": 0,
+        "gpu_memory_mode": "memory",
+        "fixture_lines": 11970,
+        "fixture_bytes": 1484284,
+        "private_bytes": {
+          "available": true,
+          "samples": 28,
+          "warmup_seconds": 2.0,
+          "window_seconds": 8.99466666666668,
+          "early_median_bytes": 122032128.0,
+          "late_median_bytes": 124420096,
+          "median_delta_bytes": 2387968.0,
+          "slope_bytes_per_second": 117126.35091683423,
+          "minimum_bytes": 120020992,
+          "maximum_bytes": 127045632
+        },
+        "end_shaping": {
+          "atlas_pages": 1,
+          "atlas_rgba_bytes": 1048576,
+          "font_source_bytes": 15238300,
+          "font_source_capacity_bytes": 15238300,
+          "glyph_entries": 15,
+          "layout_cache_estimated_bytes": 588330,
+          "unique_font_sources": 6
+        },
+        "end_gpu_allocated_bytes": 3604480,
+        "end_gpu_reserved_bytes": 12582912,
+        "peak_gpu_reserved_bytes": 12582912
+      },
+      "memory-gpu-performance": {
+        "binary_sha256": "daf1504b8868593518c6bfe006ab345d766fe0f3689f189f2b3ee3a671fea4f7",
+        "fixture_sha256": "c955720a1fc6f8e6df25ebfbb8d8a6f809e406f1db413f7625cfc76bfdc06ffb",
+        "completed": true,
+        "fixture_exit_code": 0,
+        "app_alive_at_completion": true,
+        "scrollback_lines": 0,
+        "gpu_memory_mode": "performance",
+        "fixture_lines": 12000,
+        "fixture_bytes": 1488004,
+        "private_bytes": {
+          "available": true,
+          "samples": 28,
+          "warmup_seconds": 2.0,
+          "window_seconds": 9.0,
+          "early_median_bytes": 445526016,
+          "late_median_bytes": 448749568,
+          "median_delta_bytes": 3223552,
+          "slope_bytes_per_second": 148134.88276358243,
+          "minimum_bytes": 444633088,
+          "maximum_bytes": 449810432
+        },
+        "end_shaping": {
+          "atlas_pages": 1,
+          "atlas_rgba_bytes": 1048576,
+          "font_source_bytes": 15238300,
+          "font_source_capacity_bytes": 15238300,
+          "glyph_entries": 15,
+          "layout_cache_estimated_bytes": 588330,
+          "unique_font_sources": 6
+        },
+        "end_gpu_allocated_bytes": 3604480,
+        "end_gpu_reserved_bytes": 335544320,
+        "peak_gpu_reserved_bytes": 335544320
+      }
+    },
+    "history_10000_reduction_percent": 81.14514860028933
+  },
+  "mac": {
+    "adapter": "Apple M3 Pro / Metal",
+    "scope": "Background on-screen windows, Menlo 15pt, 121x29 grid; DSR is parser acknowledgement, not display latency.",
+    "baseline_zero_history": {
+      "binary_sha256": "43c7d89afc891b798a97da0a328849019427efe36e74fd13d38171429023f142",
+      "fixture_sha256": "70ecee74f279ecb106c868a272343e30a244a6e54399118f9afcef9d1462872d",
+      "grid": [
+        121,
+        29
+      ],
+      "window_state": "background",
+      "medians": {
+        "whostty": {
+          "idle_footprint_mib": 392.2666549682617,
+          "soak_footprint_mib": 426.2510299682617,
+          "soak_rss_mib": 236.734375,
+          "soak_cpu_percent": 1.3170126682504963,
+          "burst_mib_per_second": 119.00268717758769,
+          "parser_roundtrip_p50_ms": 0.218083,
+          "parser_roundtrip_p95_ms": 0.538708
+        },
+        "ghostty": {
+          "idle_footprint_mib": 79.0479965209961,
+          "soak_footprint_mib": 80.23558807373047,
+          "soak_rss_mib": 131.0625,
+          "soak_cpu_percent": 0.15207561232189432,
+          "burst_mib_per_second": 72.4932161108244,
+          "parser_roundtrip_p50_ms": 0.226792,
+          "parser_roundtrip_p95_ms": 0.461333
+        }
+      },
+      "runs": [
+        {
+          "product": "whostty",
+          "scrollback_lines": 0,
+          "scrollback_bytes": null,
+          "payload_sha256": "4a3d36a2ef4bf0eadc0da4d28d208ce808b0ac7e9b6d279746163368520952ed",
+          "idle_footprint_bytes": 395592712,
+          "soak_footprint_bytes": 434062344,
+          "soak_cpu_percent": 1.4127419953763336,
+          "burst_mib_per_second": 119.00268717758769,
+          "parser_roundtrip_ms": {
+            "min": 0.121417,
+            "p50": 0.192625,
+            "p95": 0.325,
+            "max": 0.755166
+          }
+        },
+        {
+          "product": "ghostty",
+          "scrollback_lines": null,
+          "scrollback_bytes": 0,
+          "payload_sha256": "4a3d36a2ef4bf0eadc0da4d28d208ce808b0ac7e9b6d279746163368520952ed",
+          "idle_footprint_bytes": 82576560,
+          "soak_footprint_bytes": 83821864,
+          "soak_cpu_percent": 0.15611800432779177,
+          "burst_mib_per_second": 73.67138834125821,
+          "parser_roundtrip_ms": {
+            "min": 0.138167,
+            "p50": 0.226792,
+            "p95": 0.448,
+            "max": 0.66025
+          }
+        },
+        {
+          "product": "ghostty",
+          "scrollback_lines": null,
+          "scrollback_bytes": 0,
+          "payload_sha256": "4a3d36a2ef4bf0eadc0da4d28d208ce808b0ac7e9b6d279746163368520952ed",
+          "idle_footprint_bytes": 82887832,
+          "soak_footprint_bytes": 84133112,
+          "soak_cpu_percent": 0.1475382543938339,
+          "burst_mib_per_second": 69.35273396204863,
+          "parser_roundtrip_ms": {
+            "min": 0.144125,
+            "p50": 0.2415,
+            "p95": 0.536208,
+            "max": 0.745666
+          }
+        },
+        {
+          "product": "whostty",
+          "scrollback_lines": 0,
+          "scrollback_bytes": null,
+          "payload_sha256": "4a3d36a2ef4bf0eadc0da4d28d208ce808b0ac7e9b6d279746163368520952ed",
+          "idle_footprint_bytes": 411763744,
+          "soak_footprint_bytes": 447218720,
+          "soak_cpu_percent": 1.172287101953812,
+          "burst_mib_per_second": 128.26069387274097,
+          "parser_roundtrip_ms": {
+            "min": 0.115917,
+            "p50": 0.218083,
+            "p95": 0.539583,
+            "max": 0.948625
+          }
+        },
+        {
+          "product": "whostty",
+          "scrollback_lines": 0,
+          "scrollback_bytes": null,
+          "payload_sha256": "4a3d36a2ef4bf0eadc0da4d28d208ce808b0ac7e9b6d279746163368520952ed",
+          "idle_footprint_bytes": 411321400,
+          "soak_footprint_bytes": 446956600,
+          "soak_cpu_percent": 1.3170126682504963,
+          "burst_mib_per_second": 41.0466970955026,
+          "parser_roundtrip_ms": {
+            "min": 0.11225,
+            "p50": 0.232125,
+            "p95": 0.538708,
+            "max": 2.06575
+          }
+        },
+        {
+          "product": "ghostty",
+          "scrollback_lines": null,
+          "scrollback_bytes": 0,
+          "payload_sha256": "4a3d36a2ef4bf0eadc0da4d28d208ce808b0ac7e9b6d279746163368520952ed",
+          "idle_footprint_bytes": 82953320,
+          "soak_footprint_bytes": 84460768,
+          "soak_cpu_percent": 0.15207561232189432,
+          "burst_mib_per_second": 72.4932161108244,
+          "parser_roundtrip_ms": {
+            "min": 0.121875,
+            "p50": 0.222125,
+            "p95": 0.461333,
+            "max": 0.674041
+          }
+        }
+      ]
+    },
+    "optimized_zero_history": {
+      "binary_sha256": "7dfc1aae8202420a59058ae31e66da9509d31a49b1ada708290d875768832d5c",
+      "fixture_sha256": "70ecee74f279ecb106c868a272343e30a244a6e54399118f9afcef9d1462872d",
+      "grid": [
+        121,
+        29
+      ],
+      "window_state": "background",
+      "medians": {
+        "whostty": {
+          "idle_footprint_mib": 267.89149475097656,
+          "soak_footprint_mib": 271.53211975097656,
+          "soak_rss_mib": 111.96875,
+          "soak_cpu_percent": 1.3503538141436082,
+          "burst_mib_per_second": 125.1813891092757,
+          "parser_roundtrip_p50_ms": 0.224125,
+          "parser_roundtrip_p95_ms": 0.296583
+        },
+        "ghostty": {
+          "idle_footprint_mib": 78.0167236328125,
+          "soak_footprint_mib": 79.36058807373047,
+          "soak_rss_mib": 130.265625,
+          "soak_cpu_percent": 0.18610011307587981,
+          "burst_mib_per_second": 77.7699997799998,
+          "parser_roundtrip_p50_ms": 0.264666,
+          "parser_roundtrip_p95_ms": 0.354666
+        }
+      },
+      "runs": [
+        {
+          "product": "whostty",
+          "scrollback_lines": 0,
+          "scrollback_bytes": null,
+          "payload_sha256": "4a3d36a2ef4bf0eadc0da4d28d208ce808b0ac7e9b6d279746163368520952ed",
+          "idle_footprint_bytes": 280806312,
+          "soak_footprint_bytes": 287228840,
+          "soak_cpu_percent": 1.2921931988025055,
+          "burst_mib_per_second": 125.1813891092757,
+          "parser_roundtrip_ms": {
+            "min": 0.090666,
+            "p50": 0.225,
+            "p95": 0.299792,
+            "max": 0.643791
+          }
+        },
+        {
+          "product": "ghostty",
+          "scrollback_lines": null,
+          "scrollback_bytes": 0,
+          "payload_sha256": "4a3d36a2ef4bf0eadc0da4d28d208ce808b0ac7e9b6d279746163368520952ed",
+          "idle_footprint_bytes": 81790080,
+          "soak_footprint_bytes": 83019000,
+          "soak_cpu_percent": 0.18706937308810587,
+          "burst_mib_per_second": 72.49797710346421,
+          "parser_roundtrip_ms": {
+            "min": 0.140542,
+            "p50": 0.273875,
+            "p95": 0.347041,
+            "max": 0.395666
+          }
+        },
+        {
+          "product": "ghostty",
+          "scrollback_lines": null,
+          "scrollback_bytes": 0,
+          "payload_sha256": "4a3d36a2ef4bf0eadc0da4d28d208ce808b0ac7e9b6d279746163368520952ed",
+          "idle_footprint_bytes": 81806464,
+          "soak_footprint_bytes": 83215608,
+          "soak_cpu_percent": 0.18610011307587981,
+          "burst_mib_per_second": 82.37066612795643,
+          "parser_roundtrip_ms": {
+            "min": 0.111958,
+            "p50": 0.236458,
+            "p95": 0.378375,
+            "max": 0.631125
+          }
+        },
+        {
+          "product": "whostty",
+          "scrollback_lines": 0,
+          "scrollback_bytes": null,
+          "payload_sha256": "4a3d36a2ef4bf0eadc0da4d28d208ce808b0ac7e9b6d279746163368520952ed",
+          "idle_footprint_bytes": 281101200,
+          "soak_footprint_bytes": 284722064,
+          "soak_cpu_percent": 1.3952255708288617,
+          "burst_mib_per_second": 122.45390536162995,
+          "parser_roundtrip_ms": {
+            "min": 0.120458,
+            "p50": 0.224125,
+            "p95": 0.277917,
+            "max": 0.573958
+          }
+        },
+        {
+          "product": "whostty",
+          "scrollback_lines": 0,
+          "scrollback_bytes": null,
+          "payload_sha256": "4a3d36a2ef4bf0eadc0da4d28d208ce808b0ac7e9b6d279746163368520952ed",
+          "idle_footprint_bytes": 280904592,
+          "soak_footprint_bytes": 284558224,
+          "soak_cpu_percent": 1.3503538141436082,
+          "burst_mib_per_second": 126.15288339197421,
+          "parser_roundtrip_ms": {
+            "min": 0.12075,
+            "p50": 0.203625,
+            "p95": 0.296583,
+            "max": 0.471833
+          }
+        },
+        {
+          "product": "ghostty",
+          "scrollback_lines": null,
+          "scrollback_bytes": 0,
+          "payload_sha256": "4a3d36a2ef4bf0eadc0da4d28d208ce808b0ac7e9b6d279746163368520952ed",
+          "idle_footprint_bytes": 83608704,
+          "soak_footprint_bytes": 84870392,
+          "soak_cpu_percent": 0.15270376297471877,
+          "burst_mib_per_second": 77.7699997799998,
+          "parser_roundtrip_ms": {
+            "min": 0.164125,
+            "p50": 0.264666,
+            "p95": 0.354666,
+            "max": 0.432041
+          }
+        }
+      ]
+    },
+    "baseline_product_history": {
+      "binary_sha256": "43c7d89afc891b798a97da0a328849019427efe36e74fd13d38171429023f142",
+      "fixture_sha256": "70ecee74f279ecb106c868a272343e30a244a6e54399118f9afcef9d1462872d",
+      "grid": [
+        121,
+        29
+      ],
+      "window_state": "background",
+      "medians": {
+        "whostty": {
+          "idle_footprint_mib": 377.20410919189453,
+          "soak_footprint_mib": 446.6728820800781,
+          "soak_rss_mib": 269.78125,
+          "soak_cpu_percent": 1.3816326156376306,
+          "burst_mib_per_second": 107.50339208268421,
+          "parser_roundtrip_p50_ms": 0.191333,
+          "parser_roundtrip_p95_ms": 0.355542
+        },
+        "ghostty": {
+          "idle_footprint_mib": 78.4542007446289,
+          "soak_footprint_mib": 88.40753173828125,
+          "soak_rss_mib": 139.15625,
+          "soak_cpu_percent": 0.16235870194762395,
+          "burst_mib_per_second": 85.5912378000649,
+          "parser_roundtrip_p50_ms": 0.247584,
+          "parser_roundtrip_p95_ms": 0.351625
+        }
+      },
+      "runs": [
+        {
+          "product": "whostty",
+          "scrollback_lines": 10000,
+          "scrollback_bytes": null,
+          "payload_sha256": "4a3d36a2ef4bf0eadc0da4d28d208ce808b0ac7e9b6d279746163368520952ed",
+          "idle_footprint_bytes": 395527176,
+          "soak_footprint_bytes": 468370464,
+          "soak_cpu_percent": 1.3816326156376306,
+          "burst_mib_per_second": 107.50339208268421,
+          "parser_roundtrip_ms": {
+            "min": 0.1165,
+            "p50": 0.191333,
+            "p95": 0.355542,
+            "max": 0.830666
+          }
+        },
+        {
+          "product": "ghostty",
+          "scrollback_lines": null,
+          "scrollback_bytes": 10000000,
+          "payload_sha256": "4a3d36a2ef4bf0eadc0da4d28d208ce808b0ac7e9b6d279746163368520952ed",
+          "idle_footprint_bytes": 82265192,
+          "soak_footprint_bytes": 92702016,
+          "soak_cpu_percent": 0.16235870194762395,
+          "burst_mib_per_second": 85.5912378000649,
+          "parser_roundtrip_ms": {
+            "min": 0.128958,
+            "p50": 0.247584,
+            "p95": 0.351625,
+            "max": 0.463833
+          }
+        }
+      ]
+    },
+    "optimized_product_history": {
+      "binary_sha256": "7dfc1aae8202420a59058ae31e66da9509d31a49b1ada708290d875768832d5c",
+      "fixture_sha256": "70ecee74f279ecb106c868a272343e30a244a6e54399118f9afcef9d1462872d",
+      "grid": [
+        121,
+        29
+      ],
+      "window_state": "background",
+      "medians": {
+        "whostty": {
+          "idle_footprint_mib": 268.25091552734375,
+          "soak_footprint_mib": 303.92281341552734,
+          "soak_rss_mib": 144.5625,
+          "soak_cpu_percent": 1.3083520044218713,
+          "burst_mib_per_second": 115.99024054896557,
+          "parser_roundtrip_p50_ms": 0.218458,
+          "parser_roundtrip_p95_ms": 0.299958
+        },
+        "ghostty": {
+          "idle_footprint_mib": 84.1417236328125,
+          "soak_footprint_mib": 89.28250885009766,
+          "soak_rss_mib": 142.234375,
+          "soak_cpu_percent": 0.16758060945827,
+          "burst_mib_per_second": 85.90067225953803,
+          "parser_roundtrip_p50_ms": 0.266459,
+          "parser_roundtrip_p95_ms": 0.362458
+        }
+      },
+      "runs": [
+        {
+          "product": "whostty",
+          "scrollback_lines": 10000,
+          "scrollback_bytes": null,
+          "payload_sha256": "4a3d36a2ef4bf0eadc0da4d28d208ce808b0ac7e9b6d279746163368520952ed",
+          "idle_footprint_bytes": 281281472,
+          "soak_footprint_bytes": 318686168,
+          "soak_cpu_percent": 1.3083520044218713,
+          "burst_mib_per_second": 115.99024054896557,
+          "parser_roundtrip_ms": {
+            "min": 0.125791,
+            "p50": 0.218458,
+            "p95": 0.299958,
+            "max": 0.806042
+          }
+        },
+        {
+          "product": "ghostty",
+          "scrollback_lines": null,
+          "scrollback_bytes": 10000000,
+          "payload_sha256": "4a3d36a2ef4bf0eadc0da4d28d208ce808b0ac7e9b6d279746163368520952ed",
+          "idle_footprint_bytes": 88228992,
+          "soak_footprint_bytes": 93619496,
+          "soak_cpu_percent": 0.16758060945827,
+          "burst_mib_per_second": 85.90067225953803,
+          "parser_roundtrip_ms": {
+            "min": 0.138167,
+            "p50": 0.266459,
+            "p95": 0.362458,
+            "max": 0.776209
+          }
+        }
+      ]
+    },
+    "source_bytes_before": 65405744,
+    "source_capacity_bytes_before": 77140760,
+    "source_bytes_after": 6744728,
+    "source_capacity_bytes_after": 6744728,
+    "font_scope": "Unique source buffers; excludes egui owned parser clones.",
+    "final_cpu_submission_benchmark": [
+      {
+        "arch": "aarch64",
+        "case": "shaped_render_cpu_submission",
+        "cold_ms": 2.867208,
+        "columns": 80,
+        "glyphs_cached": 35,
+        "gpu_submission_included": false,
+        "input_latency_included": false,
+        "layouts_cached": 40,
+        "os": "macos",
+        "release": true,
+        "rows": 40,
+        "warm_frames": 200,
+        "warm_p50_ms": 0.16224999999999998,
+        "warm_p95_ms": 0.18025
+      },
+      {
+        "arch": "aarch64",
+        "case": "shaped_render_cpu_submission",
+        "cold_ms": 2.888333,
+        "columns": 80,
+        "glyphs_cached": 35,
+        "gpu_submission_included": false,
+        "input_latency_included": false,
+        "layouts_cached": 40,
+        "os": "macos",
+        "release": true,
+        "rows": 40,
+        "warm_frames": 200,
+        "warm_p50_ms": 0.167542,
+        "warm_p95_ms": 0.18275
+      },
+      {
+        "arch": "aarch64",
+        "case": "shaped_render_cpu_submission",
+        "cold_ms": 2.910208,
+        "columns": 80,
+        "glyphs_cached": 35,
+        "gpu_submission_included": false,
+        "input_latency_included": false,
+        "layouts_cached": 40,
+        "os": "macos",
+        "release": true,
+        "rows": 40,
+        "warm_frames": 200,
+        "warm_p50_ms": 0.163209,
+        "warm_p95_ms": 0.175958
+      },
+      {
+        "arch": "aarch64",
+        "case": "shaped_render_cpu_submission",
+        "cold_ms": 2.8297079999999997,
+        "columns": 80,
+        "glyphs_cached": 35,
+        "gpu_submission_included": false,
+        "input_latency_included": false,
+        "layouts_cached": 40,
+        "os": "macos",
+        "release": true,
+        "rows": 40,
+        "warm_frames": 200,
+        "warm_p50_ms": 0.166875,
+        "warm_p95_ms": 0.175416
+      },
+      {
+        "arch": "aarch64",
+        "case": "shaped_render_cpu_submission",
+        "cold_ms": 2.865209,
+        "columns": 80,
+        "glyphs_cached": 35,
+        "gpu_submission_included": false,
+        "input_latency_included": false,
+        "layouts_cached": 40,
+        "os": "macos",
+        "release": true,
+        "rows": 40,
+        "warm_frames": 200,
+        "warm_p50_ms": 0.161167,
+        "warm_p95_ms": 0.173375
+      }
+    ],
+    "excluded_trials": "The incomplete 2-whostty startup left the screen before measurement; it was retried with identical binary and fixture hashes. Intermediate implementation runs were excluded."
+  },
+  "validation": {
+    "check_ci_run": 39600558131,
+    "windows_package_ci_run": 39600558205,
+    "mac_runtime_scales": [
+      1,
+      1.25,
+      1.5,
+      2,
+      4
+    ],
+    "windows_runtime_scales": [
+      1,
+      1.25,
+      1.5,
+      2
+    ],
+    "rust_tests": {
+      "mac_passed": 71,
+      "windows_passed": 73,
+      "ignored_per_platform": 1
+    },
+    "ci_regression_ceilings_mib": {
+      "late_private": 128,
+      "gpu_reserved": 64,
+      "shaped_atlas": 4
+    }
+  },
+  "target": {
+    "private_mib": 50,
+    "history_lines": 10000,
+    "achieved": false,
+    "remaining": [
+      "Cold scrollback compression preserving search/copy/reflow and cell attributes.",
+      "Avoid egui owned font-byte clones.",
+      "Metal/driver overhead, RTX hardware measurements and active display/input latency."
+    ]
+  }
+}
