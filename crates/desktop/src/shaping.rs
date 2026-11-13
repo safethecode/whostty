@@ -4,6 +4,7 @@ use eframe::egui::{
 };
 use rustybuzz::{Direction, Feature, UnicodeBuffer};
 use std::{
+    cell::OnceCell,
     collections::{HashMap, VecDeque},
     sync::Arc,
 };
@@ -481,6 +482,15 @@ impl Renderer {
         let cell = f32::from_bits(key.cell_width) * density;
         let mut result = Vec::new();
         let stops = &key.stops;
+        // Source probing visits the same font for many cells. Borrow parsed faces
+        // only for this layout; cache failed parses too, without parsing unused fonts.
+        let faces: Vec<OnceCell<Option<rustybuzz::Face<'_>>>> =
+            self.sources.iter().map(|_| OnceCell::new()).collect();
+        let face_for = |source: usize| {
+            faces[source]
+                .get_or_init(|| parse_face(&self.sources[source]))
+                .as_ref()
+        };
         let mut start = 0;
         while start < stops.len() {
             let cell_end = |index: usize| {
@@ -490,8 +500,7 @@ impl Renderer {
             };
             let source_for = |index: usize| {
                 self.families[key.style].iter().copied().find(|source| {
-                    let data = &self.sources[*source];
-                    let Some(face) = parse_face(data) else {
+                    let Some(face) = face_for(*source) else {
                         return false;
                     };
                     key.text[stops[index].byte..cell_end(index)]
@@ -524,7 +533,7 @@ impl Renderer {
             let byte_start = stops[start].byte;
             let byte_end = stops.get(end).map_or(key.text.len(), |stop| stop.byte);
             let data = &self.sources[source];
-            let face = parse_face(data)?;
+            let face = face_for(source)?;
             let font = ab_glyph::FontRef::try_from_slice_and_index(&data.font, data.index).ok()?;
             // egui interprets font size in em units before converting to ab_glyph's
             // ascent-minus-descent scale. Use the same conversion for cell agreement.
@@ -562,7 +571,7 @@ impl Renderer {
                     ));
                 }
             }
-            let shaped = rustybuzz::shape(&face, &features, buffer);
+            let shaped = rustybuzz::shape(face, &features, buffer);
             let infos = shaped.glyph_infos();
             let positions = shaped.glyph_positions();
             let column_at = |byte: usize| {
