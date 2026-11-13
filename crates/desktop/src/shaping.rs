@@ -16,6 +16,17 @@ const MAX_LAYOUTS: usize = 512;
 const MAX_LAYOUT_BYTES: usize = 8 * 1024 * 1024;
 const MAX_RUN_BYTES: usize = 8192;
 
+#[cfg(test)]
+thread_local! {
+    static FACE_PARSE_COUNT: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+}
+
+fn parse_face(data: &FontData) -> Option<rustybuzz::Face<'_>> {
+    #[cfg(test)]
+    FACE_PARSE_COUNT.with(|count| count.set(count.get() + 1));
+    rustybuzz::Face::from_slice(&data.font, data.index)
+}
+
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct Stop {
     pub byte: usize,
@@ -480,7 +491,7 @@ impl Renderer {
             let source_for = |index: usize| {
                 self.families[key.style].iter().copied().find(|source| {
                     let data = &self.sources[*source];
-                    let Some(face) = rustybuzz::Face::from_slice(&data.font, data.index) else {
+                    let Some(face) = parse_face(data) else {
                         return false;
                     };
                     key.text[stops[index].byte..cell_end(index)]
@@ -513,7 +524,7 @@ impl Renderer {
             let byte_start = stops[start].byte;
             let byte_end = stops.get(end).map_or(key.text.len(), |stop| stop.byte);
             let data = &self.sources[source];
-            let face = rustybuzz::Face::from_slice(&data.font, data.index)?;
+            let face = parse_face(data)?;
             let font = ab_glyph::FontRef::try_from_slice_and_index(&data.font, data.index).ok()?;
             // egui interprets font size in em units before converting to ab_glyph's
             // ascent-minus-descent scale. Use the same conversion for cell agreement.
@@ -713,6 +724,24 @@ mod tests {
             "{}",
             serde_json::json!({"case":"shaped_render_cpu_submission","os":std::env::consts::OS,"arch":std::env::consts::ARCH,"release":!cfg!(debug_assertions),"columns":80,"rows":40,"warm_frames":200,"cold_ms":cold_ms,"warm_p50_ms":samples[100],"warm_p95_ms":samples[190],"glyphs_cached":glyphs,"layouts_cached":layouts,"gpu_submission_included":false,"input_latency_included":false})
         );
+    }
+
+    #[test]
+    fn font_faces_are_parsed_once_per_shape_including_failed_fallbacks() {
+        let mut renderer = renderer();
+        let invalid = renderer.sources.len();
+        renderer.sources.push(Arc::new(FontData::from_owned(Vec::new())));
+        let unused = renderer.sources.len();
+        renderer.sources.push(Arc::new(FontData::from_owned(vec![0; 16])));
+        renderer.families[0] = vec![invalid, 0, unused];
+        FACE_PARSE_COUNT.with(|count| count.set(0));
+        let shaped = renderer
+            .shape(&key("fifififi", &[0, 1, 2, 3, 4, 5, 6, 7], 8, true))
+            .unwrap();
+        assert_eq!(shaped.len(), 4, "Ligature shaping changed");
+        FACE_PARSE_COUNT.with(|count| {
+            assert_eq!(count.get(), 2, "Reparsed a font or eagerly parsed an unused fallback");
+        });
     }
 
     #[test]
