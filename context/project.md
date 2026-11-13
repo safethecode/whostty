@@ -177,6 +177,10 @@ PR #18(DEC 1007/휠 누적)과 #19(IME 포커스·순서)은 main에 병합했�
 
 ## OpenType 글자 렌더링
 
+2026-11-13: 한 번의 shaping 호출에서 폰트 fallback 탐색과 shaping이 같은 parsed face를 지연 재사용한다.
+실패한 parse도 재사용하고 미사용 fallback은 파싱하지 않는다. 회귀 fixture에서 17회→2회를 검증했다.
+[Windows/macOS CI·RTX 부하·배율·지연 smoke 검증](shaping-face-reuse-2026-11-13.md)에 범위와 남은 항목을 기록한다.
+
 Rustybuzz로 LTR run을 shaping하고 ab_glyph로 OpenType glyph ID를 rasterize한 뒤 공유 GPU atlas에 그린다.
 행·색/스타일·블록 커서 경계를 지키고, 글꼴과 문자군을 나눈다. ligature·mark 위치를 원래 VT 셀 범위에 맞춰 배치한다.
 검색·복사·접근성은 원래 셀 데이터를 유지한다. 같은 glyph는 다시 업로드하지 않는다. font_ligatures 설정을 즉시 전환할 수 있다.

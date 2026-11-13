@@ -44,7 +44,7 @@ jobs:
         run: |
           $runtimeExe = Join-Path $env:RUNNER_TEMP 'whostty-native-runtime/whostty.exe'
           foreach ($history in @(0, 10000)) {
-            python scripts/windows-soak.py --exe $runtimeExe --output "dist/memory-history-$history" --idle-seconds 8 --duration 20 --warmup-seconds 2 --alternate-interval 0 --scrollback $history --memory-map --close-on-success
+            python scripts/windows-soak.py --exe $runtimeExe --output "dist/memory-history-$history" --idle-seconds 8 --duration 20 --minimum-lines 12000 --warmup-seconds 2 --alternate-interval 0 --scrollback $history --memory-map --close-on-success
             if ($LASTEXITCODE -ne 0) { throw "Native memory diagnostic failed ($history)" }
           }
           python scripts/verify_memory_budget.py dist/memory-history-0 dist/memory-history-10000

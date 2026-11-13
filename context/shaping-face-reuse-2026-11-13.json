@@ -1,0 +1,1528 @@
+{
+  "schema_version": 1,
+  "date": "2026-11-13",
+  "baseline_commit": "86d7ce9f2880499d716382d6f3d46a46cad89eba",
+  "candidate_commit": "75b1aaff935d78fbb7803dc031094febcb7c891b",
+  "baseline_package_run": 43391896966,
+  "candidate_package_run": 43395600320,
+  "gpu": "NVIDIA GeForce RTX 3080 Ti",
+  "comparison": {
+    "baseline_vulkan": {
+      "binary_sha256": "28dd0692389564332495d7ddb58f170fd9ac2ba2289e5588c1733937dca2659e",
+      "fixture_sha256": "0dd3f1a2101d2c91370e5bbdd563480ab40df92cf50cb1fb9c402d9feb9ecd6a",
+      "platform": "Windows-11-10.0.26100-SP0",
+      "python_version": "3.12.14 (main, Aug 25 2026, 14:01:42) [MSC v.1944 64 bit (AMD64)]",
+      "duration_seconds": 60.0,
+      "idle_seconds": 8.0,
+      "lines_per_second": 600,
+      "minimum_lines": 36000,
+      "sample_seconds": 1.0,
+      "warmup_seconds": 30.0,
+      "stall_seconds": 5.0,
+      "logical_cpu_count": 16,
+      "scrollback_lines": 10000,
+      "font_ligatures": true,
+      "wgpu_backend_override": "vulkan",
+      "gpu_memory_mode": "compact",
+      "started_unix_seconds": 1794559540.6969895,
+      "completed": true,
+      "reason": "fixture_completed",
+      "elapsed_seconds": 70.26500000013039,
+      "app_alive_at_completion": true,
+      "fixture_exit_code": 0,
+      "observed_lines_per_second": 600.0,
+      "observed_source_bytes_per_second": 74401.21666666666,
+      "sample_count": 70,
+      "cleanup": "owned_tree_taskkill_exit_0",
+      "errors": [],
+      "progress_proxy": {
+        "stall_threshold_seconds": 5.0,
+        "maximum_observed_gap_seconds": 1.0159999998286366,
+        "stalls": []
+      },
+      "resources": {
+        "app": {
+          "sample_count": 70,
+          "memory": {
+            "private_bytes": {
+              "available": true,
+              "samples": 40,
+              "warmup_seconds": 30.0,
+              "window_seconds": 13.0,
+              "early_median_bytes": 286646272,
+              "late_median_bytes": 286752768,
+              "median_delta_bytes": 106496,
+              "slope_bytes_per_second": 98903.4328387123,
+              "minimum_bytes": 276254720,
+              "maximum_bytes": 286900224
+            },
+            "rss_bytes": {
+              "available": true,
+              "samples": 40,
+              "warmup_seconds": 30.0,
+              "window_seconds": 13.0,
+              "early_median_bytes": 227569664,
+              "late_median_bytes": 227790848,
+              "median_delta_bytes": 221184,
+              "slope_bytes_per_second": 101099.12417165491,
+              "minimum_bytes": 217378816,
+              "maximum_bytes": 227868672
+            }
+          },
+          "handles": {
+            "first": 3,
+            "last": 604,
+            "maximum": 623,
+            "median": 619.0
+          },
+          "threads": {
+            "first": 1,
+            "last": 21,
+            "maximum": 29,
+            "median": 28.0
+          },
+          "cpu_percent_one_core": {
+            "first": 46.1368110314037,
+            "last": 22.230691053039102,
+            "maximum": 46.1368110314037,
+            "median": 23.06840551570185
+          },
+          "cpu_seconds_delta": 15.640625
+        },
+        "child": {
+          "sample_count": 68,
+          "memory": {
+            "private_bytes": {
+              "available": true,
+              "samples": 39,
+              "warmup_seconds": 30.0,
+              "window_seconds": 12.666666666666666,
+              "early_median_bytes": 13840384,
+              "late_median_bytes": 13733888,
+              "median_delta_bytes": -106496,
+              "slope_bytes_per_second": -2673.3301512303333,
+              "minimum_bytes": 13733888,
+              "maximum_bytes": 13840384
+            },
+            "rss_bytes": {
+              "available": true,
+              "samples": 39,
+              "warmup_seconds": 30.0,
+              "window_seconds": 12.666666666666666,
+              "early_median_bytes": 22568960,
+              "late_median_bytes": 22532096,
+              "median_delta_bytes": -36864,
+              "slope_bytes_per_second": -819.303395323322,
+              "minimum_bytes": 22528000,
+              "maximum_bytes": 22585344
+            }
+          },
+          "handles": {
+            "first": 140,
+            "last": 140,
+            "maximum": 140,
+            "median": 140.0
+          },
+          "threads": {
+            "first": 4,
+            "last": 1,
+            "maximum": 4,
+            "median": 4.0
+          },
+          "cpu_percent_one_core": {
+            "first": 1.5625,
+            "last": 1.5625,
+            "maximum": 3.1758130075770143,
+            "median": 1.539408866797324
+          },
+          "cpu_seconds_delta": 0.734375
+        }
+      },
+      "fixture": {
+        "state": "completed",
+        "lines": 36000,
+        "bytes": 4464073,
+        "screen_switches": 5,
+        "reason": "duration",
+        "exit_code": 0,
+        "elapsed_seconds": 60.0,
+        "updated_unix_seconds": 1794559609.5667717,
+        "phase": "output"
+      }
+    },
+    "baseline_dx12": {
+      "binary_sha256": "28dd0692389564332495d7ddb58f170fd9ac2ba2289e5588c1733937dca2659e",
+      "fixture_sha256": "0dd3f1a2101d2c91370e5bbdd563480ab40df92cf50cb1fb9c402d9feb9ecd6a",
+      "platform": "Windows-11-10.0.26100-SP0",
+      "python_version": "3.12.14 (main, Aug 25 2026, 14:01:42) [MSC v.1944 64 bit (AMD64)]",
+      "duration_seconds": 60.0,
+      "idle_seconds": 8.0,
+      "lines_per_second": 600,
+      "minimum_lines": 36000,
+      "sample_seconds": 1.0,
+      "warmup_seconds": 30.0,
+      "stall_seconds": 5.0,
+      "logical_cpu_count": 16,
+      "scrollback_lines": 10000,
+      "font_ligatures": true,
+      "wgpu_backend_override": "dx12",
+      "gpu_memory_mode": "compact",
+      "started_unix_seconds": 1794559611.0676475,
+      "completed": true,
+      "reason": "fixture_completed",
+      "elapsed_seconds": 70.18699999991804,
+      "app_alive_at_completion": true,
+      "fixture_exit_code": 0,
+      "observed_lines_per_second": 600.0,
+      "observed_source_bytes_per_second": 74401.21666666666,
+      "sample_count": 70,
+      "cleanup": "owned_tree_taskkill_exit_0",
+      "errors": [],
+      "progress_proxy": {
+        "stall_threshold_seconds": 5.0,
+        "maximum_observed_gap_seconds": 1.0149999996647239,
+        "stalls": []
+      },
+      "resources": {
+        "app": {
+          "sample_count": 70,
+          "memory": {
+            "private_bytes": {
+              "available": true,
+              "samples": 40,
+              "warmup_seconds": 30.0,
+              "window_seconds": 13.0,
+              "early_median_bytes": 237854720,
+              "late_median_bytes": 237907968.0,
+              "median_delta_bytes": 53248.0,
+              "slope_bytes_per_second": 96625.58323966175,
+              "minimum_bytes": 227463168,
+              "maximum_bytes": 238051328
+            },
+            "rss_bytes": {
+              "available": true,
+              "samples": 40,
+              "warmup_seconds": 30.0,
+              "window_seconds": 13.0,
+              "early_median_bytes": 203710464,
+              "late_median_bytes": 203829248.0,
+              "median_delta_bytes": 118784.0,
+              "slope_bytes_per_second": 96532.90970497087,
+              "minimum_bytes": 193544192,
+              "maximum_bytes": 203902976
+            }
+          },
+          "handles": {
+            "first": 14,
+            "last": 606,
+            "maximum": 625,
+            "median": 620.0
+          },
+          "threads": {
+            "first": 4,
+            "last": 25,
+            "maximum": 33,
+            "median": 32.0
+          },
+          "cpu_percent_one_core": {
+            "first": 40.625,
+            "last": 26.5625,
+            "maximum": 40.625,
+            "median": 25.0
+          },
+          "cpu_seconds_delta": 17.265625
+        },
+        "child": {
+          "sample_count": 68,
+          "memory": {
+            "private_bytes": {
+              "available": true,
+              "samples": 39,
+              "warmup_seconds": 30.0,
+              "window_seconds": 12.671666666554907,
+              "early_median_bytes": 13635584,
+              "late_median_bytes": 13529088,
+              "median_delta_bytes": -106496,
+              "slope_bytes_per_second": -2672.709937102968,
+              "minimum_bytes": 13529088,
+              "maximum_bytes": 13635584
+            },
+            "rss_bytes": {
+              "available": true,
+              "samples": 39,
+              "warmup_seconds": 30.0,
+              "window_seconds": 12.671666666554907,
+              "early_median_bytes": 22323200,
+              "late_median_bytes": 22290432,
+              "median_delta_bytes": -32768,
+              "slope_bytes_per_second": -661.503013920217,
+              "minimum_bytes": 22286336,
+              "maximum_bytes": 22343680
+            }
+          },
+          "handles": {
+            "first": 140,
+            "last": 140,
+            "maximum": 140,
+            "median": 140.0
+          },
+          "threads": {
+            "first": 4,
+            "last": 1,
+            "maximum": 4,
+            "median": 4.0
+          },
+          "cpu_percent_one_core": {
+            "first": 1.5625,
+            "last": 0,
+            "maximum": 4.6875,
+            "median": 1.5394088675035733
+          },
+          "cpu_seconds_delta": 0.84375
+        }
+      },
+      "fixture": {
+        "state": "completed",
+        "lines": 36000,
+        "bytes": 4464073,
+        "screen_switches": 5,
+        "reason": "duration",
+        "exit_code": 0,
+        "elapsed_seconds": 60.0,
+        "updated_unix_seconds": 1794559679.8307948,
+        "phase": "output"
+      }
+    },
+    "candidate_vulkan": {
+      "binary_sha256": "a58b959dbdda83839a540e422a2ab53a8f4a1cf80640239dc23161cad01f52eb",
+      "fixture_sha256": "0dd3f1a2101d2c91370e5bbdd563480ab40df92cf50cb1fb9c402d9feb9ecd6a",
+      "platform": "Windows-11-10.0.26100-SP0",
+      "python_version": "3.12.14 (main, Aug 25 2026, 14:01:42) [MSC v.1944 64 bit (AMD64)]",
+      "duration_seconds": 60.0,
+      "idle_seconds": 8.0,
+      "lines_per_second": 600,
+      "minimum_lines": 36000,
+      "sample_seconds": 1.0,
+      "warmup_seconds": 30.0,
+      "stall_seconds": 5.0,
+      "logical_cpu_count": 16,
+      "scrollback_lines": 10000,
+      "font_ligatures": true,
+      "wgpu_backend_override": "vulkan",
+      "gpu_memory_mode": "compact",
+      "started_unix_seconds": 1794559911.693451,
+      "completed": true,
+      "reason": "fixture_completed",
+      "elapsed_seconds": 70.875,
+      "app_alive_at_completion": true,
+      "fixture_exit_code": 0,
+      "observed_lines_per_second": 600.0,
+      "observed_source_bytes_per_second": 74401.21666666666,
+      "sample_count": 70,
+      "cleanup": "owned_tree_taskkill_exit_0",
+      "errors": [],
+      "progress_proxy": {
+        "stall_threshold_seconds": 5.0,
+        "maximum_observed_gap_seconds": 1.0150000001303852,
+        "stalls": []
+      },
+      "resources": {
+        "app": {
+          "sample_count": 70,
+          "memory": {
+            "private_bytes": {
+              "available": true,
+              "samples": 40,
+              "warmup_seconds": 30.0,
+              "window_seconds": 13.0,
+              "early_median_bytes": 285892608,
+              "late_median_bytes": 286253056,
+              "median_delta_bytes": 360448,
+              "slope_bytes_per_second": 109750.26712097313,
+              "minimum_bytes": 275214336,
+              "maximum_bytes": 286396416
+            },
+            "rss_bytes": {
+              "available": true,
+              "samples": 40,
+              "warmup_seconds": 30.0,
+              "window_seconds": 13.0,
+              "early_median_bytes": 236490752,
+              "late_median_bytes": 236920832,
+              "median_delta_bytes": 430080,
+              "slope_bytes_per_second": 112256.60809561168,
+              "minimum_bytes": 225947648,
+              "maximum_bytes": 236998656
+            }
+          },
+          "handles": {
+            "first": 14,
+            "last": 607,
+            "maximum": 626,
+            "median": 623.0
+          },
+          "threads": {
+            "first": 4,
+            "last": 21,
+            "maximum": 29,
+            "median": 28.0
+          },
+          "cpu_percent_one_core": {
+            "first": 56.25,
+            "last": 19.035532997443603,
+            "maximum": 56.25,
+            "median": 15.625
+          },
+          "cpu_seconds_delta": 11.34375
+        },
+        "child": {
+          "sample_count": 68,
+          "memory": {
+            "private_bytes": {
+              "available": true,
+              "samples": 39,
+              "warmup_seconds": 30.0,
+              "window_seconds": 12.666666666666666,
+              "early_median_bytes": 13484032,
+              "late_median_bytes": 13377536,
+              "median_delta_bytes": -106496,
+              "slope_bytes_per_second": -2673.091749238429,
+              "minimum_bytes": 13377536,
+              "maximum_bytes": 13484032
+            },
+            "rss_bytes": {
+              "available": true,
+              "samples": 39,
+              "warmup_seconds": 30.0,
+              "window_seconds": 12.666666666666666,
+              "early_median_bytes": 22249472,
+              "late_median_bytes": 22216704,
+              "median_delta_bytes": -32768,
+              "slope_bytes_per_second": -737.8438792093662,
+              "minimum_bytes": 22212608,
+              "maximum_bytes": 22269952
+            }
+          },
+          "handles": {
+            "first": 140,
+            "last": 140,
+            "maximum": 140,
+            "median": 140.0
+          },
+          "threads": {
+            "first": 4,
+            "last": 1,
+            "maximum": 4,
+            "median": 4.0
+          },
+          "cpu_percent_one_core": {
+            "first": 0,
+            "last": 3.125,
+            "maximum": 3.1758130075770143,
+            "median": 1.5625
+          },
+          "cpu_seconds_delta": 0.8125
+        }
+      },
+      "fixture": {
+        "state": "completed",
+        "lines": 36000,
+        "bytes": 4464073,
+        "screen_switches": 5,
+        "reason": "duration",
+        "exit_code": 0,
+        "elapsed_seconds": 60.0,
+        "updated_unix_seconds": 1794559981.2135434,
+        "phase": "output"
+      }
+    },
+    "candidate_dx12": {
+      "binary_sha256": "a58b959dbdda83839a540e422a2ab53a8f4a1cf80640239dc23161cad01f52eb",
+      "fixture_sha256": "0dd3f1a2101d2c91370e5bbdd563480ab40df92cf50cb1fb9c402d9feb9ecd6a",
+      "platform": "Windows-11-10.0.26100-SP0",
+      "python_version": "3.12.14 (main, Aug 25 2026, 14:01:42) [MSC v.1944 64 bit (AMD64)]",
+      "duration_seconds": 60.0,
+      "idle_seconds": 8.0,
+      "lines_per_second": 600,
+      "minimum_lines": 36000,
+      "sample_seconds": 1.0,
+      "warmup_seconds": 30.0,
+      "stall_seconds": 5.0,
+      "logical_cpu_count": 16,
+      "scrollback_lines": 10000,
+      "font_ligatures": true,
+      "wgpu_backend_override": "dx12",
+      "gpu_memory_mode": "compact",
+      "started_unix_seconds": 1794559982.663813,
+      "completed": true,
+      "reason": "fixture_completed",
+      "elapsed_seconds": 70.20299999974668,
+      "app_alive_at_completion": true,
+      "fixture_exit_code": 0,
+      "observed_lines_per_second": 600.0,
+      "observed_source_bytes_per_second": 74401.21666666666,
+      "sample_count": 70,
+      "cleanup": "owned_tree_taskkill_exit_0",
+      "errors": [],
+      "progress_proxy": {
+        "stall_threshold_seconds": 5.0,
+        "maximum_observed_gap_seconds": 1.016000000294298,
+        "stalls": []
+      },
+      "resources": {
+        "app": {
+          "sample_count": 70,
+          "memory": {
+            "private_bytes": {
+              "available": true,
+              "samples": 40,
+              "warmup_seconds": 30.0,
+              "window_seconds": 13.0,
+              "early_median_bytes": 238723072,
+              "late_median_bytes": 238829568,
+              "median_delta_bytes": 106496,
+              "slope_bytes_per_second": 101148.84692308558,
+              "minimum_bytes": 228044800,
+              "maximum_bytes": 238972928
+            },
+            "rss_bytes": {
+              "available": true,
+              "samples": 40,
+              "warmup_seconds": 30.0,
+              "window_seconds": 13.0,
+              "early_median_bytes": 204410880,
+              "late_median_bytes": 204541952,
+              "median_delta_bytes": 131072,
+              "slope_bytes_per_second": 99571.85429129374,
+              "minimum_bytes": 194023424,
+              "maximum_bytes": 204611584
+            }
+          },
+          "handles": {
+            "first": 14,
+            "last": 608,
+            "maximum": 627,
+            "median": 624.0
+          },
+          "threads": {
+            "first": 4,
+            "last": 25,
+            "maximum": 33,
+            "median": 32.0
+          },
+          "cpu_percent_one_core": {
+            "first": 44.598917309915976,
+            "last": 21.875,
+            "maximum": 44.598917309915976,
+            "median": 19.992618104445093
+          },
+          "cpu_seconds_delta": 13.859375
+        },
+        "child": {
+          "sample_count": 68,
+          "memory": {
+            "private_bytes": {
+              "available": true,
+              "samples": 39,
+              "warmup_seconds": 30.0,
+              "window_seconds": 12.666666666666666,
+              "early_median_bytes": 13746176,
+              "late_median_bytes": 13631488,
+              "median_delta_bytes": -114688,
+              "slope_bytes_per_second": -2878.638519815423,
+              "minimum_bytes": 13631488,
+              "maximum_bytes": 13746176
+            },
+            "rss_bytes": {
+              "available": true,
+              "samples": 39,
+              "warmup_seconds": 30.0,
+              "window_seconds": 12.666666666666666,
+              "early_median_bytes": 22450176,
+              "late_median_bytes": 22417408,
+              "median_delta_bytes": -32768,
+              "slope_bytes_per_second": -658.2708600950454,
+              "minimum_bytes": 22401024,
+              "maximum_bytes": 22466560
+            }
+          },
+          "handles": {
+            "first": 140,
+            "last": 140,
+            "maximum": 140,
+            "median": 140.0
+          },
+          "threads": {
+            "first": 4,
+            "last": 1,
+            "maximum": 4,
+            "median": 4.0
+          },
+          "cpu_percent_one_core": {
+            "first": 1.5879065037885072,
+            "last": 1.5879065037885072,
+            "maximum": 4.6875,
+            "median": 1.5625
+          },
+          "cpu_seconds_delta": 0.921875
+        }
+      },
+      "fixture": {
+        "state": "completed",
+        "lines": 36000,
+        "bytes": 4464073,
+        "screen_switches": 5,
+        "reason": "duration",
+        "exit_code": 0,
+        "elapsed_seconds": 60.0,
+        "updated_unix_seconds": 1794560051.4507947,
+        "phase": "output"
+      }
+    }
+  },
+  "native_checks": {
+    "native-dx12-100": {
+      "adapter": "NVIDIA GeForce RTX 3080 Ti",
+      "arch": "x86_64",
+      "backend": "Dx12",
+      "colored_pixels": 701,
+      "device_type": "DiscreteGpu",
+      "elapsed_ms": 2179,
+      "error": null,
+      "glyphs_cached": 33,
+      "image_size": [
+        800,
+        500
+      ],
+      "input_roundtrip": true,
+      "latency": {
+        "measurement_scope": "Application pipeline latency from immediately before Session::write through a disposable shell/PTY to GUI acknowledgement observation and GPU screenshot readback. Includes input queuing, shell execution, PTY output, terminal parsing, GUI scheduling, shaping/rendering and readback. Not physical keystroke-to-photon latency or pure GPU frame time.",
+        "percentile_method": "nearest_rank",
+        "requested_samples": 10,
+        "samples": 10,
+        "stale_screenshots_ignored": 0,
+        "unit": "ms",
+        "warmup_samples": 20,
+        "warmup_samples_completed": 20,
+        "write_to_ack_observed": {
+          "max": 15.206000000000001,
+          "min": 12.1792,
+          "p50": 14.2901,
+          "p95": 15.206000000000001,
+          "p99": 15.206000000000001
+        },
+        "write_to_gpu_readback": {
+          "max": 68.83200000000001,
+          "min": 62.528200000000005,
+          "p50": 66.40790000000001,
+          "p95": 68.83200000000001,
+          "p99": 68.83200000000001
+        }
+      },
+      "layouts_cached": 36,
+      "memory": {
+        "gpu_allocator": {
+          "allocated_bytes": 4653056,
+          "allocations": [
+            {
+              "bytes": 65536,
+              "name": "Unlabeled buffer"
+            },
+            {
+              "bytes": 1048576,
+              "name": "egui_texid_Managed(1)"
+            },
+            {
+              "bytes": 1048576,
+              "name": "egui_texid_Managed(0)"
+            },
+            {
+              "bytes": 65536,
+              "name": "egui_vertex_buffer"
+            },
+            {
+              "bytes": 524288,
+              "name": "(wgpu internal) zero init buffer"
+            },
+            {
+              "bytes": 65536,
+              "name": "egui_uniform_buffer"
+            },
+            {
+              "bytes": 1638400,
+              "name": "egui_screen_capture_texture"
+            },
+            {
+              "bytes": 65536,
+              "name": "egui_index_buffer"
+            },
+            {
+              "bytes": 65536,
+              "name": "(wgpu internal) Staging"
+            },
+            {
+              "bytes": 65536,
+              "name": "(wgpu internal) Staging"
+            }
+          ],
+          "blocks": [
+            8388608,
+            4194304,
+            4194304
+          ],
+          "reserved_bytes": 16777216
+        },
+        "gpu_memory_mode": "compact",
+        "scope": "Logical font/texture/cache sizes and backend GPU allocator report. Excludes egui font-byte clones, driver/system overhead and process heap accounting. GPU reservations are not OS process private bytes.",
+        "shaping": {
+          "atlas_pages": 1,
+          "atlas_rgba_bytes": 1048576,
+          "font_source_bytes": 16575020,
+          "font_source_capacity_bytes": 16575020,
+          "glyph_entries": 33,
+          "layout_cache_estimated_bytes": 69318,
+          "unique_font_sources": 9
+        },
+        "textures": [
+          {
+            "bytes": 1048576,
+            "name": "egui_font_texture",
+            "size": [
+              8192,
+              32
+            ]
+          },
+          {
+            "bytes": 1048576,
+            "name": "terminal-shaped-glyphs",
+            "size": [
+              512,
+              512
+            ]
+          }
+        ]
+      },
+      "native_pixels_per_point": 1.0,
+      "native_renderer": true,
+      "ok": true,
+      "os": "windows",
+      "pixels_per_point": 1.0,
+      "pty": true,
+      "requested_scale": 1.0,
+      "text_shaping": true
+    },
+    "native-dx12-125": {
+      "adapter": "NVIDIA GeForce RTX 3080 Ti",
+      "arch": "x86_64",
+      "backend": "Dx12",
+      "colored_pixels": 1127,
+      "device_type": "DiscreteGpu",
+      "elapsed_ms": 272,
+      "error": null,
+      "glyphs_cached": 23,
+      "image_size": [
+        800,
+        500
+      ],
+      "input_roundtrip": true,
+      "layouts_cached": 5,
+      "memory": {
+        "gpu_allocator": {
+          "allocated_bytes": 4653056,
+          "allocations": [
+            {
+              "bytes": 1048576,
+              "name": "egui_texid_Managed(1)"
+            },
+            {
+              "bytes": 65536,
+              "name": "egui_uniform_buffer"
+            },
+            {
+              "bytes": 65536,
+              "name": "egui_index_buffer"
+            },
+            {
+              "bytes": 65536,
+              "name": "egui_vertex_buffer"
+            },
+            {
+              "bytes": 1048576,
+              "name": "egui_texid_Managed(0)"
+            },
+            {
+              "bytes": 1638400,
+              "name": "egui_screen_capture_texture"
+            },
+            {
+              "bytes": 65536,
+              "name": "Unlabeled buffer"
+            },
+            {
+              "bytes": 524288,
+              "name": "(wgpu internal) zero init buffer"
+            },
+            {
+              "bytes": 65536,
+              "name": "(wgpu internal) Staging"
+            },
+            {
+              "bytes": 65536,
+              "name": "(wgpu internal) Staging"
+            }
+          ],
+          "blocks": [
+            8388608,
+            4194304,
+            4194304
+          ],
+          "reserved_bytes": 16777216
+        },
+        "gpu_memory_mode": "compact",
+        "scope": "Logical font/texture/cache sizes and backend GPU allocator report. Excludes egui font-byte clones, driver/system overhead and process heap accounting. GPU reservations are not OS process private bytes.",
+        "shaping": {
+          "atlas_pages": 1,
+          "atlas_rgba_bytes": 1048576,
+          "font_source_bytes": 16575020,
+          "font_source_capacity_bytes": 16575020,
+          "glyph_entries": 23,
+          "layout_cache_estimated_bytes": 17508,
+          "unique_font_sources": 9
+        },
+        "textures": [
+          {
+            "bytes": 1048576,
+            "name": "terminal-shaped-glyphs",
+            "size": [
+              512,
+              512
+            ]
+          },
+          {
+            "bytes": 1048576,
+            "name": "egui_font_texture",
+            "size": [
+              8192,
+              32
+            ]
+          }
+        ]
+      },
+      "native_pixels_per_point": 1.0,
+      "native_renderer": true,
+      "ok": true,
+      "os": "windows",
+      "pixels_per_point": 1.25,
+      "pty": true,
+      "requested_scale": 1.25,
+      "text_shaping": true
+    },
+    "native-dx12-150": {
+      "adapter": "NVIDIA GeForce RTX 3080 Ti",
+      "arch": "x86_64",
+      "backend": "Dx12",
+      "colored_pixels": 1692,
+      "device_type": "DiscreteGpu",
+      "elapsed_ms": 286,
+      "error": null,
+      "glyphs_cached": 23,
+      "image_size": [
+        800,
+        500
+      ],
+      "input_roundtrip": true,
+      "layouts_cached": 5,
+      "memory": {
+        "gpu_allocator": {
+          "allocated_bytes": 4653056,
+          "allocations": [
+            {
+              "bytes": 65536,
+              "name": "egui_index_buffer"
+            },
+            {
+              "bytes": 65536,
+              "name": "Unlabeled buffer"
+            },
+            {
+              "bytes": 1048576,
+              "name": "egui_texid_Managed(1)"
+            },
+            {
+              "bytes": 1638400,
+              "name": "egui_screen_capture_texture"
+            },
+            {
+              "bytes": 65536,
+              "name": "egui_uniform_buffer"
+            },
+            {
+              "bytes": 1048576,
+              "name": "egui_texid_Managed(0)"
+            },
+            {
+              "bytes": 524288,
+              "name": "(wgpu internal) zero init buffer"
+            },
+            {
+              "bytes": 65536,
+              "name": "egui_vertex_buffer"
+            },
+            {
+              "bytes": 65536,
+              "name": "(wgpu internal) Staging"
+            },
+            {
+              "bytes": 65536,
+              "name": "(wgpu internal) Staging"
+            }
+          ],
+          "blocks": [
+            8388608,
+            4194304,
+            4194304
+          ],
+          "reserved_bytes": 16777216
+        },
+        "gpu_memory_mode": "compact",
+        "scope": "Logical font/texture/cache sizes and backend GPU allocator report. Excludes egui font-byte clones, driver/system overhead and process heap accounting. GPU reservations are not OS process private bytes.",
+        "shaping": {
+          "atlas_pages": 1,
+          "atlas_rgba_bytes": 1048576,
+          "font_source_bytes": 16575020,
+          "font_source_capacity_bytes": 16575020,
+          "glyph_entries": 23,
+          "layout_cache_estimated_bytes": 14076,
+          "unique_font_sources": 9
+        },
+        "textures": [
+          {
+            "bytes": 1048576,
+            "name": "egui_font_texture",
+            "size": [
+              8192,
+              32
+            ]
+          },
+          {
+            "bytes": 1048576,
+            "name": "terminal-shaped-glyphs",
+            "size": [
+              512,
+              512
+            ]
+          }
+        ]
+      },
+      "native_pixels_per_point": 1.0,
+      "native_renderer": true,
+      "ok": true,
+      "os": "windows",
+      "pixels_per_point": 1.5,
+      "pty": true,
+      "requested_scale": 1.5,
+      "text_shaping": true
+    },
+    "native-dx12-200": {
+      "adapter": "NVIDIA GeForce RTX 3080 Ti",
+      "arch": "x86_64",
+      "backend": "Dx12",
+      "colored_pixels": 2987,
+      "device_type": "DiscreteGpu",
+      "elapsed_ms": 270,
+      "error": null,
+      "glyphs_cached": 23,
+      "image_size": [
+        800,
+        500
+      ],
+      "input_roundtrip": true,
+      "layouts_cached": 5,
+      "memory": {
+        "gpu_allocator": {
+          "allocated_bytes": 5701632,
+          "allocations": [
+            {
+              "bytes": 65536,
+              "name": "egui_vertex_buffer"
+            },
+            {
+              "bytes": 524288,
+              "name": "(wgpu internal) zero init buffer"
+            },
+            {
+              "bytes": 1048576,
+              "name": "egui_texid_Managed(1)"
+            },
+            {
+              "bytes": 65536,
+              "name": "egui_index_buffer"
+            },
+            {
+              "bytes": 2097152,
+              "name": "egui_texid_Managed(0)"
+            },
+            {
+              "bytes": 1638400,
+              "name": "egui_screen_capture_texture"
+            },
+            {
+              "bytes": 65536,
+              "name": "egui_uniform_buffer"
+            },
+            {
+              "bytes": 65536,
+              "name": "Unlabeled buffer"
+            },
+            {
+              "bytes": 65536,
+              "name": "(wgpu internal) Staging"
+            },
+            {
+              "bytes": 65536,
+              "name": "(wgpu internal) Staging"
+            }
+          ],
+          "blocks": [
+            8388608,
+            4194304,
+            4194304
+          ],
+          "reserved_bytes": 16777216
+        },
+        "gpu_memory_mode": "compact",
+        "scope": "Logical font/texture/cache sizes and backend GPU allocator report. Excludes egui font-byte clones, driver/system overhead and process heap accounting. GPU reservations are not OS process private bytes.",
+        "shaping": {
+          "atlas_pages": 1,
+          "atlas_rgba_bytes": 1048576,
+          "font_source_bytes": 16575020,
+          "font_source_capacity_bytes": 16575020,
+          "glyph_entries": 23,
+          "layout_cache_estimated_bytes": 10644,
+          "unique_font_sources": 9
+        },
+        "textures": [
+          {
+            "bytes": 1048576,
+            "name": "terminal-shaped-glyphs",
+            "size": [
+              512,
+              512
+            ]
+          },
+          {
+            "bytes": 2097152,
+            "name": "egui_font_texture",
+            "size": [
+              8192,
+              64
+            ]
+          }
+        ]
+      },
+      "native_pixels_per_point": 1.0,
+      "native_renderer": true,
+      "ok": true,
+      "os": "windows",
+      "pixels_per_point": 2.0,
+      "pty": true,
+      "requested_scale": 2.0,
+      "text_shaping": true
+    },
+    "native-vulkan-100": {
+      "adapter": "NVIDIA GeForce RTX 3080 Ti",
+      "arch": "x86_64",
+      "backend": "Vulkan",
+      "colored_pixels": 701,
+      "device_type": "DiscreteGpu",
+      "elapsed_ms": 3483,
+      "error": null,
+      "glyphs_cached": 34,
+      "image_size": [
+        800,
+        500
+      ],
+      "input_roundtrip": true,
+      "latency": {
+        "measurement_scope": "Application pipeline latency from immediately before Session::write through a disposable shell/PTY to GUI acknowledgement observation and GPU screenshot readback. Includes input queuing, shell execution, PTY output, terminal parsing, GUI scheduling, shaping/rendering and readback. Not physical keystroke-to-photon latency or pure GPU frame time.",
+        "percentile_method": "nearest_rank",
+        "requested_samples": 10,
+        "samples": 10,
+        "stale_screenshots_ignored": 0,
+        "unit": "ms",
+        "warmup_samples": 20,
+        "warmup_samples_completed": 20,
+        "write_to_ack_observed": {
+          "max": 30.9355,
+          "min": 0.4316,
+          "p50": 0.6591,
+          "p95": 30.9355,
+          "p99": 30.9355
+        },
+        "write_to_gpu_readback": {
+          "max": 135.68859999999998,
+          "min": 97.688,
+          "p50": 99.5045,
+          "p95": 135.68859999999998,
+          "p99": 135.68859999999998
+        }
+      },
+      "layouts_cached": 37,
+      "memory": {
+        "gpu_allocator": null,
+        "gpu_memory_mode": "compact",
+        "scope": "Logical font/texture/cache sizes and backend GPU allocator report. Excludes egui font-byte clones, driver/system overhead and process heap accounting. GPU reservations are not OS process private bytes.",
+        "shaping": {
+          "atlas_pages": 1,
+          "atlas_rgba_bytes": 1048576,
+          "font_source_bytes": 16575020,
+          "font_source_capacity_bytes": 16575020,
+          "glyph_entries": 34,
+          "layout_cache_estimated_bytes": 74796,
+          "unique_font_sources": 9
+        },
+        "textures": [
+          {
+            "bytes": 1048576,
+            "name": "egui_font_texture",
+            "size": [
+              8192,
+              32
+            ]
+          },
+          {
+            "bytes": 1048576,
+            "name": "terminal-shaped-glyphs",
+            "size": [
+              512,
+              512
+            ]
+          }
+        ]
+      },
+      "native_pixels_per_point": 1.0,
+      "native_renderer": true,
+      "ok": true,
+      "os": "windows",
+      "pixels_per_point": 1.0,
+      "pty": true,
+      "requested_scale": 1.0,
+      "text_shaping": true
+    },
+    "native-vulkan-125": {
+      "adapter": "NVIDIA GeForce RTX 3080 Ti",
+      "arch": "x86_64",
+      "backend": "Vulkan",
+      "colored_pixels": 1127,
+      "device_type": "DiscreteGpu",
+      "elapsed_ms": 386,
+      "error": null,
+      "glyphs_cached": 23,
+      "image_size": [
+        800,
+        500
+      ],
+      "input_roundtrip": true,
+      "layouts_cached": 5,
+      "memory": {
+        "gpu_allocator": null,
+        "gpu_memory_mode": "compact",
+        "scope": "Logical font/texture/cache sizes and backend GPU allocator report. Excludes egui font-byte clones, driver/system overhead and process heap accounting. GPU reservations are not OS process private bytes.",
+        "shaping": {
+          "atlas_pages": 1,
+          "atlas_rgba_bytes": 1048576,
+          "font_source_bytes": 16575020,
+          "font_source_capacity_bytes": 16575020,
+          "glyph_entries": 23,
+          "layout_cache_estimated_bytes": 17508,
+          "unique_font_sources": 9
+        },
+        "textures": [
+          {
+            "bytes": 1048576,
+            "name": "terminal-shaped-glyphs",
+            "size": [
+              512,
+              512
+            ]
+          },
+          {
+            "bytes": 1048576,
+            "name": "egui_font_texture",
+            "size": [
+              8192,
+              32
+            ]
+          }
+        ]
+      },
+      "native_pixels_per_point": 1.0,
+      "native_renderer": true,
+      "ok": true,
+      "os": "windows",
+      "pixels_per_point": 1.25,
+      "pty": true,
+      "requested_scale": 1.25,
+      "text_shaping": true
+    },
+    "native-vulkan-150": {
+      "adapter": "NVIDIA GeForce RTX 3080 Ti",
+      "arch": "x86_64",
+      "backend": "Vulkan",
+      "colored_pixels": 1692,
+      "device_type": "DiscreteGpu",
+      "elapsed_ms": 369,
+      "error": null,
+      "glyphs_cached": 23,
+      "image_size": [
+        800,
+        500
+      ],
+      "input_roundtrip": true,
+      "layouts_cached": 5,
+      "memory": {
+        "gpu_allocator": null,
+        "gpu_memory_mode": "compact",
+        "scope": "Logical font/texture/cache sizes and backend GPU allocator report. Excludes egui font-byte clones, driver/system overhead and process heap accounting. GPU reservations are not OS process private bytes.",
+        "shaping": {
+          "atlas_pages": 1,
+          "atlas_rgba_bytes": 1048576,
+          "font_source_bytes": 16575020,
+          "font_source_capacity_bytes": 16575020,
+          "glyph_entries": 23,
+          "layout_cache_estimated_bytes": 14076,
+          "unique_font_sources": 9
+        },
+        "textures": [
+          {
+            "bytes": 1048576,
+            "name": "terminal-shaped-glyphs",
+            "size": [
+              512,
+              512
+            ]
+          },
+          {
+            "bytes": 1048576,
+            "name": "egui_font_texture",
+            "size": [
+              8192,
+              32
+            ]
+          }
+        ]
+      },
+      "native_pixels_per_point": 1.0,
+      "native_renderer": true,
+      "ok": true,
+      "os": "windows",
+      "pixels_per_point": 1.5,
+      "pty": true,
+      "requested_scale": 1.5,
+      "text_shaping": true
+    },
+    "native-vulkan-200": {
+      "adapter": "NVIDIA GeForce RTX 3080 Ti",
+      "arch": "x86_64",
+      "backend": "Vulkan",
+      "colored_pixels": 2987,
+      "device_type": "DiscreteGpu",
+      "elapsed_ms": 289,
+      "error": null,
+      "glyphs_cached": 23,
+      "image_size": [
+        800,
+        500
+      ],
+      "input_roundtrip": true,
+      "layouts_cached": 5,
+      "memory": {
+        "gpu_allocator": null,
+        "gpu_memory_mode": "compact",
+        "scope": "Logical font/texture/cache sizes and backend GPU allocator report. Excludes egui font-byte clones, driver/system overhead and process heap accounting. GPU reservations are not OS process private bytes.",
+        "shaping": {
+          "atlas_pages": 1,
+          "atlas_rgba_bytes": 1048576,
+          "font_source_bytes": 16575020,
+          "font_source_capacity_bytes": 16575020,
+          "glyph_entries": 23,
+          "layout_cache_estimated_bytes": 10644,
+          "unique_font_sources": 9
+        },
+        "textures": [
+          {
+            "bytes": 1048576,
+            "name": "terminal-shaped-glyphs",
+            "size": [
+              512,
+              512
+            ]
+          },
+          {
+            "bytes": 2097152,
+            "name": "egui_font_texture",
+            "size": [
+              8192,
+              64
+            ]
+          }
+        ]
+      },
+      "native_pixels_per_point": 1.0,
+      "native_renderer": true,
+      "ok": true,
+      "os": "windows",
+      "pixels_per_point": 2.0,
+      "pty": true,
+      "requested_scale": 2.0,
+      "text_shaping": true
+    }
+  },
+  "ci_memory": {
+    "0": {
+      "completed": true,
+      "binary_sha256": "a58b959dbdda83839a540e422a2ab53a8f4a1cf80640239dc23161cad01f52eb",
+      "fixture_sha256": "225b71d71ba18dcd18fb216c2f1a69e515bf026206b9856a88d2d634d1d0a3eb",
+      "duration_seconds": 20.0,
+      "idle_seconds": 8.0,
+      "minimum_lines": 12000,
+      "scrollback_lines": 0,
+      "resources": {
+        "app": {
+          "sample_count": 30,
+          "memory": {
+            "private_bytes": {
+              "available": true,
+              "samples": 28,
+              "warmup_seconds": 2.0,
+              "window_seconds": 9.0,
+              "early_median_bytes": 59019264,
+              "late_median_bytes": 61161472,
+              "median_delta_bytes": 2142208,
+              "slope_bytes_per_second": 109309.64811669308,
+              "minimum_bytes": 57143296,
+              "maximum_bytes": 62267392
+            },
+            "rss_bytes": {
+              "available": true,
+              "samples": 28,
+              "warmup_seconds": 2.0,
+              "window_seconds": 9.0,
+              "early_median_bytes": 84897792,
+              "late_median_bytes": 91308032,
+              "median_delta_bytes": 6410240,
+              "slope_bytes_per_second": 252392.61007796568,
+              "minimum_bytes": 84623360,
+              "maximum_bytes": 91885568
+            }
+          },
+          "handles": {
+            "first": 21,
+            "last": 347,
+            "maximum": 349,
+            "median": 349.0
+          },
+          "threads": {
+            "first": 2,
+            "last": 14,
+            "maximum": 16,
+            "median": 15.0
+          },
+          "cpu_percent_one_core": {
+            "first": 296.875,
+            "last": 231.83434959350055,
+            "maximum": 344.4881889763713,
+            "median": 235.01016260163067
+          },
+          "cpu_seconds_delta": 74.1875
+        },
+        "child": {
+          "sample_count": 28,
+          "memory": {
+            "private_bytes": {
+              "available": true,
+              "samples": 27,
+              "warmup_seconds": 2.0,
+              "window_seconds": 8.672000000000006,
+              "early_median_bytes": 13590528,
+              "late_median_bytes": 13590528,
+              "median_delta_bytes": 0,
+              "slope_bytes_per_second": 0.0,
+              "minimum_bytes": 13590528,
+              "maximum_bytes": 13590528
+            },
+            "rss_bytes": {
+              "available": true,
+              "samples": 27,
+              "warmup_seconds": 2.0,
+              "window_seconds": 8.672000000000006,
+              "early_median_bytes": 21450752,
+              "late_median_bytes": 21467136,
+              "median_delta_bytes": 16384,
+              "slope_bytes_per_second": 1530.0055987989329,
+              "minimum_bytes": 21405696,
+              "maximum_bytes": 21467136
+            }
+          },
+          "handles": {
+            "first": 133,
+            "last": 133,
+            "maximum": 133,
+            "median": 133.0
+          },
+          "threads": {
+            "first": 4,
+            "last": 4,
+            "maximum": 4,
+            "median": 4.0
+          },
+          "cpu_percent_one_core": {
+            "first": 0,
+            "last": 1.5394088669950945,
+            "maximum": 3.078817733990189,
+            "median": 0
+          },
+          "cpu_seconds_delta": 0.171875
+        }
+      },
+      "lines": 12000
+    },
+    "10000": {
+      "completed": true,
+      "binary_sha256": "a58b959dbdda83839a540e422a2ab53a8f4a1cf80640239dc23161cad01f52eb",
+      "fixture_sha256": "225b71d71ba18dcd18fb216c2f1a69e515bf026206b9856a88d2d634d1d0a3eb",
+      "duration_seconds": 20.0,
+      "idle_seconds": 8.0,
+      "minimum_lines": 12000,
+      "scrollback_lines": 10000,
+      "resources": {
+        "app": {
+          "sample_count": 30,
+          "memory": {
+            "private_bytes": {
+              "available": true,
+              "samples": 28,
+              "warmup_seconds": 2.0,
+              "window_seconds": 9.005000000000015,
+              "early_median_bytes": 57954304.0,
+              "late_median_bytes": 91873280,
+              "median_delta_bytes": 33918976.0,
+              "slope_bytes_per_second": 1609812.6177717505,
+              "minimum_bytes": 56909824,
+              "maximum_bytes": 91873280
+            },
+            "rss_bytes": {
+              "available": true,
+              "samples": 28,
+              "warmup_seconds": 2.0,
+              "window_seconds": 9.005000000000015,
+              "early_median_bytes": 84703232.0,
+              "late_median_bytes": 121962496,
+              "median_delta_bytes": 37259264.0,
+              "slope_bytes_per_second": 1724388.6421022192,
+              "minimum_bytes": 84463616,
+              "maximum_bytes": 122093568
+            }
+          },
+          "handles": {
+            "first": 21,
+            "last": 347,
+            "maximum": 349,
+            "median": 349.0
+          },
+          "threads": {
+            "first": 1,
+            "last": 11,
+            "maximum": 13,
+            "median": 13.0
+          },
+          "cpu_percent_one_core": {
+            "first": 275.0,
+            "last": 220.1354679802862,
+            "maximum": 329.9492385786947,
+            "median": 229.6875
+          },
+          "cpu_seconds_delta": 71.609375
+        },
+        "child": {
+          "sample_count": 28,
+          "memory": {
+            "private_bytes": {
+              "available": true,
+              "samples": 27,
+              "warmup_seconds": 2.0,
+              "window_seconds": 8.666666666666666,
+              "early_median_bytes": 13537280,
+              "late_median_bytes": 13549568,
+              "median_delta_bytes": 12288,
+              "slope_bytes_per_second": 525.2093487751813,
+              "minimum_bytes": 13537280,
+              "maximum_bytes": 13549568
+            },
+            "rss_bytes": {
+              "available": true,
+              "samples": 27,
+              "warmup_seconds": 2.0,
+              "window_seconds": 8.666666666666666,
+              "early_median_bytes": 21405696,
+              "late_median_bytes": 21434368,
+              "median_delta_bytes": 28672,
+              "slope_bytes_per_second": 2055.859821592432,
+              "minimum_bytes": 21360640,
+              "maximum_bytes": 21434368
+            }
+          },
+          "handles": {
+            "first": 133,
+            "last": 133,
+            "maximum": 133,
+            "median": 133.0
+          },
+          "threads": {
+            "first": 4,
+            "last": 4,
+            "maximum": 4,
+            "median": 4.0
+          },
+          "cpu_percent_one_core": {
+            "first": 0,
+            "last": 0,
+            "maximum": 3.175813008129961,
+            "median": 0
+          },
+          "cpu_seconds_delta": 0.171875
+        }
+      },
+      "lines": 12000
+    }
+  },
+  "limitations": [
+    "One sequential run per binary/backend; desktop load and window visibility were not isolated.",
+    "CPU median covers all process samples, including startup and 8-second idle; one logical core is 100%.",
+    "Late memory median uses the final 13-second window after 30-second monitor warmup.",
+    "Successful completion is flushed PTY output/progress, not visual correctness, leak freedom, multi-hour stability or physical key-to-photon latency.",
+    "close-on-success terminates only the owned process tree after recording completion; app_exit_code=1 is that cleanup, not a pre-completion crash.",
+    "Native scale checks override render scale on one 100% display; physical multi-monitor DPI transitions remain untested.",
+    "Latency smoke uses 10 measured samples after 20 warmup samples; screenshot readback includes shell/PTY/GUI/scheduling and is not physical display latency."
+  ],
+  "native_check_provenance": {
+    "candidate_source_commit": "75b1aaff935d78fbb7803dc031094febcb7c891b",
+    "candidate_binary_sha256": "a58b959dbdda83839a540e422a2ab53a8f4a1cf80640239dc23161cad01f52eb",
+    "checker_script": "scripts/check-windows-runtime.ps1",
+    "checker_script_sha256": "6d27b3a71c84b393c947a7fd995d5d0f42f672266919609022d2d50a8563387e",
+    "invocation_flags": {
+      "RequireBundledConpty": true,
+      "Scale": [
+        1.0,
+        1.25,
+        1.5,
+        2.0
+      ],
+      "LatencySamples_at_scale_one": 10
+    },
+    "checker_exit_code": 0,
+    "bundled_conpty_observation": "Checker observed conpty.dll loaded from the supplied candidate executable directory; throws if missing or loaded elsewhere.",
+    "conpty_sha256": "5afea6c9480e2c7dfd195376dd10996b0ae25cdc6f014e6247fd8aedc8c34852",
+    "openconsole_sha256": "6f8e68dec4e8e5e15a54ecc8afa127b0e62139edc004ffbb4892125ff01d5737"
+  }
+}
