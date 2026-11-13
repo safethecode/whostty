@@ -730,9 +730,13 @@ mod tests {
     fn font_faces_are_parsed_once_per_shape_including_failed_fallbacks() {
         let mut renderer = renderer();
         let invalid = renderer.sources.len();
-        renderer.sources.push(Arc::new(FontData::from_owned(Vec::new())));
+        renderer
+            .sources
+            .push(Arc::new(FontData::from_owned(Vec::new())));
         let unused = renderer.sources.len();
-        renderer.sources.push(Arc::new(FontData::from_owned(vec![0; 16])));
+        renderer
+            .sources
+            .push(Arc::new(FontData::from_owned(vec![0; 16])));
         renderer.families[0] = vec![invalid, 0, unused];
         FACE_PARSE_COUNT.with(|count| count.set(0));
         let shaped = renderer
@@ -740,7 +744,11 @@ mod tests {
             .unwrap();
         assert_eq!(shaped.len(), 4, "Ligature shaping changed");
         FACE_PARSE_COUNT.with(|count| {
-            assert_eq!(count.get(), 2, "Reparsed a font or eagerly parsed an unused fallback");
+            assert_eq!(
+                count.get(),
+                2,
+                "Reparsed a font or eagerly parsed an unused fallback"
+            );
         });
     }
 
