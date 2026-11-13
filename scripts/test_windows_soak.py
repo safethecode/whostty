@@ -8,6 +8,8 @@ import sys
 import tempfile
 import time
 import unittest
+from unittest import mock
+from types import SimpleNamespace
 from pathlib import Path
 
 
@@ -22,6 +24,28 @@ def load_soak():
 
 
 class WindowsSoakTest(unittest.TestCase):
+    def test_minimum_output_survives_a_scheduler_delay_at_duration_boundary(self):
+        soak = load_soak()
+        now = [0.0]
+        delays = iter([0.01, 0.13])
+
+        def sleep(seconds):
+            now[0] += seconds + next(delays, 0.0)
+
+        with tempfile.TemporaryDirectory() as temporary:
+            args = soak.parse_args(["--child", "--output", temporary, "--token", "minimum",
+                                    "--duration", "0.2", "--lines-per-second", "600",
+                                    "--alternate-interval", "0", "--minimum-lines", "120"])
+            output = io.BytesIO()
+            with mock.patch.object(soak.time, "monotonic", side_effect=lambda: now[0]), \
+                 mock.patch.object(soak.time, "sleep", side_effect=sleep), \
+                 mock.patch.object(soak.sys, "stdout", SimpleNamespace(buffer=output)):
+                self.assertEqual(soak.run_child(args), 0)
+            status = json.loads((Path(temporary) / "child-status.json").read_text(encoding="utf-8"))
+            self.assertGreaterEqual(status["lines"], 120)
+            self.assertGreaterEqual(status["elapsed_seconds"], 0.2)
+            self.assertEqual(status["lines"], output.getvalue().count(b"\n"))
+
     def child_command(self, directory, *extra):
         return [sys.executable, str(SCRIPT), "--child", "--output", str(directory),
                 "--token", "unit-test", *extra]
@@ -50,7 +74,7 @@ class WindowsSoakTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             directory = Path(temporary)
             with subprocess.Popen(self.child_command(
-                    directory, "--duration", "20", "--lines-per-second", "100"),
+                    directory, "--duration", "20", "--lines-per-second", "100", "--minimum-lines", "2000"),
                     stdout=subprocess.PIPE, stderr=subprocess.PIPE) as process:
                 deadline = time.monotonic() + 3
                 while not (directory / "child-status.json").exists() and time.monotonic() < deadline:
@@ -83,7 +107,8 @@ class WindowsSoakTest(unittest.TestCase):
         soak = load_soak()
         for option, value in [("--duration", "nan"), ("--duration", "inf"),
                               ("--duration", "0"), ("--lines-per-second", "1000000"),
-                              ("--sample-seconds", "0"), ("--alternate-interval", "-1")]:
+                              ("--sample-seconds", "0"), ("--alternate-interval", "-1"),
+                              ("--minimum-lines", "2000000")]:
             with self.subTest(option=option, value=value), contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
                 soak.parse_args(["--child", "--output", "unused", "--token", "test", option, value])
 

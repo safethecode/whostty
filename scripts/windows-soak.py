@@ -47,6 +47,8 @@ def parse_args(argv=None):
     parser.add_argument("--output", type=Path, help="new output directory (default: unique temp directory)")
     parser.add_argument("--duration", type=bounded_number(0.1, 86400), default=1800.0)
     parser.add_argument("--lines-per-second", type=bounded_number(10, 2000, True), default=600)
+    parser.add_argument("--minimum-lines", type=bounded_number(0, 172800000, True), default=0,
+                        help="continue paced output until this floor is met, within monitor time/stall limits")
     parser.add_argument("--sample-seconds", type=bounded_number(0.1, 60), default=1.0)
     parser.add_argument("--warmup-seconds", type=bounded_number(0, 3600), default=30.0)
     parser.add_argument("--stall-seconds", type=bounded_number(1, 300), default=5.0)
@@ -63,6 +65,8 @@ def parse_args(argv=None):
     parser.add_argument("--child", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--token", help=argparse.SUPPRESS)
     args = parser.parse_args(argv)
+    if args.minimum_lines > math.ceil(args.duration * args.lines_per_second):
+        parser.error("--minimum-lines must not exceed the nominal duration times output rate")
     if args.child:
         if args.output is None or not args.token:
             parser.error("--child requires --output and --token")
@@ -140,7 +144,7 @@ def run_child(args):
             if (directory / "stop").exists():
                 status["reason"] = "stop_requested"
                 break
-            if now - start >= args.duration:
+            if now - start >= args.duration and status["lines"] >= args.minimum_lines:
                 status["reason"] = "duration"
                 break
             if args.alternate_interval and now >= next_switch:
@@ -161,7 +165,11 @@ def run_child(args):
                 next_status = now + 0.25
             # Do not flood the PTY with catch-up batches after an output block.
             deadline = max(deadline + period, now)
-            time.sleep(min(max(0, deadline - now), max(0, start + args.duration - now)))
+            delay = max(0, deadline - now)
+            remaining = start + args.duration - now
+            # A delayed fixed-workload run still uses pacing after its nominal
+            # duration. Never turn the missing final batches into a catch-up flood.
+            time.sleep(min(delay, remaining) if remaining > 0 else delay)
         emit((f"{ESC}[?1049l{ESC}[0m" if alternate else f"{ESC}[0m").encode())
         status.update(state="completed", exit_code=0)
         heartbeat()
@@ -412,6 +420,7 @@ def run_monitor(args):
                sys.executable, "-u", str(Path(__file__).resolve()), "--child", "--output", str(directory),
                "--token", token, "--duration", str(args.duration),
                "--lines-per-second", str(args.lines_per_second),
+               "--minimum-lines", str(args.minimum_lines),
                "--alternate-interval", str(args.alternate_interval), "--idle-seconds", str(args.idle_seconds)]
     start = time.monotonic()
     samples = []
@@ -431,6 +440,7 @@ def run_monitor(args):
                 "fixture_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
                 "python_version": sys.version, "platform": platform.platform(),
                 "duration_seconds": args.duration, "lines_per_second": args.lines_per_second,
+                "minimum_lines": args.minimum_lines,
                 "sample_seconds": args.sample_seconds, "warmup_seconds": args.warmup_seconds,
                 "stall_seconds": args.stall_seconds, "logical_cpu_count": os.cpu_count(),
                 "scrollback_lines": args.scrollback, "font_ligatures": not args.no_ligatures,
@@ -535,7 +545,8 @@ def run_monitor(args):
 
     completed = bool(reason == "fixture_completed" and fixture_exit_code == 0 and status and status["exit_code"] == 0
                      and status["reason"] == "duration"
-                     and status["elapsed_seconds"] >= args.duration and not watch.stalls)
+                     and status["elapsed_seconds"] >= args.duration
+                     and status["lines"] >= args.minimum_lines and not watch.stalls)
     report = {**metadata, "output": str(directory), "completed": completed, "reason": reason,
               "elapsed_seconds": time.monotonic() - start, "app_pid": app.pid if app else None,
               "app_alive_at_completion": app_alive_at_completion,
