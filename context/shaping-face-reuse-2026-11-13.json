@@ -1504,5 +1504,25 @@
     "close-on-success terminates only the owned process tree after recording completion; app_exit_code=1 is that cleanup, not a pre-completion crash.",
     "Native scale checks override render scale on one 100% display; physical multi-monitor DPI transitions remain untested.",
     "Latency smoke uses 10 measured samples after 20 warmup samples; screenshot readback includes shell/PTY/GUI/scheduling and is not physical display latency."
-  ]
+  ],
+  "native_check_provenance": {
+    "candidate_source_commit": "75b1aaff935d78fbb7803dc031094febcb7c891b",
+    "candidate_binary_sha256": "a58b959dbdda83839a540e422a2ab53a8f4a1cf80640239dc23161cad01f52eb",
+    "checker_script": "scripts/check-windows-runtime.ps1",
+    "checker_script_sha256": "6d27b3a71c84b393c947a7fd995d5d0f42f672266919609022d2d50a8563387e",
+    "invocation_flags": {
+      "RequireBundledConpty": true,
+      "Scale": [
+        1.0,
+        1.25,
+        1.5,
+        2.0
+      ],
+      "LatencySamples_at_scale_one": 10
+    },
+    "checker_exit_code": 0,
+    "bundled_conpty_observation": "Checker observed conpty.dll loaded from the supplied candidate executable directory; throws if missing or loaded elsewhere.",
+    "conpty_sha256": "5afea6c9480e2c7dfd195376dd10996b0ae25cdc6f014e6247fd8aedc8c34852",
+    "openconsole_sha256": "6f8e68dec4e8e5e15a54ecc8afa127b0e62139edc004ffbb4892125ff01d5737"
+  }
 }
