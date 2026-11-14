@@ -211,7 +211,7 @@ mod tests {
                     show(ctx, |ui| {
                         let response = menu(ui, |ui| {
                             opened = true;
-                            ui.button("PowerShell");
+                            let _ = ui.button("PowerShell");
                         });
                         point = response.response.rect.center();
                     });
