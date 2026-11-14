@@ -37,6 +37,11 @@ jobs:
             ./scripts/check-windows-runtime.ps1 -Executable (Join-Path $runtimeDirectory 'whostty.exe') -RequireBundledConpty -Scale $scale -ReportPath "dist/whostty-runtime-check-$percent.json"
           }
           ./scripts/check-windows-runtime.ps1 -Executable (Join-Path $runtimeDirectory 'whostty.exe') -RequireBundledConpty -Scale 1.25 -LatencySamples 10 -ReportPath dist/whostty-input-latency-smoke.json
+      - name: Capture the actual application toolbar
+        shell: pwsh
+        run: |
+          python scripts/capture_windows_ui.py --exe (Join-Path $env:RUNNER_TEMP 'whostty-native-runtime/whostty.exe') --output dist/ui-snapshot
+          if ($LASTEXITCODE -ne 0) { throw 'Application UI snapshot failed' }
       - name: Record controlled native memory baselines
         shell: pwsh
         env:
@@ -67,5 +72,6 @@ jobs:
             dist/memory-history-10000/
             dist/memory-gpu-*/
             dist/gpu-*-check.json
+            dist/ui-snapshot/
           if-no-files-found: error
           retention-days: 14
