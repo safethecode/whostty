@@ -10,6 +10,7 @@ mod launch;
 mod layout;
 mod memory;
 mod shaping;
+mod snapshot;
 mod toolbar;
 mod view;
 mod workspace;
