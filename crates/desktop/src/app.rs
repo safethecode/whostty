@@ -45,6 +45,7 @@ pub struct Whostty {
     search_focus: bool,
     reported_focus: Option<PaneId>,
     memory: Option<crate::memory::Recorder>,
+    snapshot: Option<crate::snapshot::Snapshot>,
 }
 
 impl Whostty {
@@ -89,6 +90,7 @@ impl Whostty {
             search_focus: false,
             reported_focus: None,
             memory: crate::memory::Recorder::from_environment(cc),
+            snapshot: crate::snapshot::Snapshot::from_environment(),
         };
         if !app.config_path.exists() {
             if let Err(error) = app.settings.save(&app.config_path) {
@@ -833,108 +835,90 @@ impl eframe::App for Whostty {
         let mut new_profile = None;
         let mut close_tab = None;
         let mut split_axis = None;
-        egui::TopBottomPanel::top("tabs")
-            .exact_height(44.0)
-            .frame(
-                egui::Frame::new()
-                    .fill(Color32::from_rgb(25, 30, 36))
-                    .inner_margin(egui::Margin::symmetric(10, 7)),
-            )
-            .show(ctx, |ui| {
-                ui.horizontal(|ui| {
-                    ui.label(RichText::new("W").color(ACCENT).strong().size(18.0));
-                    egui::ScrollArea::horizontal()
-                        .max_width((ui.available_width() - 122.0).max(100.0))
-                        .show(ui, |ui| {
-                            ui.horizontal(|ui| {
-                                for (index, tab) in self.tabs.iter().enumerate() {
-                                    let title: String = tab.pane().title.chars().take(24).collect();
-                                    let title = format!(
-                                        "{}{}",
-                                        if tab.bell() && index != self.active {
-                                            "• "
-                                        } else {
-                                            ""
-                                        },
-                                        title
-                                    );
-                                    if ui
-                                        .selectable_label(index == self.active, title)
-                                        .on_hover_text(&tab.pane().title)
-                                        .clicked()
-                                    {
-                                        self.active = index;
-                                        self.focus_terminal = true;
-                                        self.composition.clear();
-                                    }
-                                    if ui
-                                        .small_button("×")
-                                        .on_hover_text("Close tab and all its panes")
-                                        .clicked()
-                                    {
-                                        close_tab = Some(index);
-                                    }
-                                    ui.add_space(5.0);
-                                }
-                            });
-                        });
-                    if ui
-                        .button("+")
-                        .on_hover_text(format!(
-                            "New tab · {}",
-                            self.shortcuts.label(Action::NewTab)
-                        ))
+        crate::toolbar::show(ctx, |ui| {
+            crate::toolbar::tabs(ui, |ui| {
+                for (index, tab) in self.tabs.iter().enumerate() {
+                    let title: String = tab.pane().title.chars().take(24).collect();
+                    let title = format!(
+                        "{}{}",
+                        if tab.bell() && index != self.active {
+                            "• "
+                        } else {
+                            ""
+                        },
+                        title
+                    );
+                    if crate::toolbar::title(ui, index == self.active, &title)
+                        .on_hover_text(&tab.pane().title)
                         .clicked()
                     {
-                        new_profile = Some((self.settings.default_profile, true));
+                        self.active = index;
+                        self.focus_terminal = true;
+                        self.composition.clear();
                     }
-                    ui.menu_button("v", |ui| {
-                        for (index, profile) in self.settings.profiles.iter().enumerate() {
-                            if ui.button(&profile.name).clicked() {
-                                new_profile = Some((index, false));
-                                ui.close_menu();
-                            }
-                        }
-                        ui.separator();
-                        if ui
-                            .add_enabled(
-                                !self.tabs.is_empty(),
-                                egui::Button::new(format!(
-                                    "Split right  {}",
-                                    self.shortcuts.label(Action::SplitRight)
-                                )),
-                            )
-                            .clicked()
-                        {
-                            split_axis = Some(Axis::Columns);
-                            ui.close_menu();
-                        }
-                        if ui
-                            .add_enabled(
-                                !self.tabs.is_empty(),
-                                egui::Button::new(format!(
-                                    "Split down  {}",
-                                    self.shortcuts.label(Action::SplitDown)
-                                )),
-                            )
-                            .clicked()
-                        {
-                            split_axis = Some(Axis::Rows);
-                            ui.close_menu();
-                        }
-                    });
-                    if ui
-                        .button("...")
-                        .on_hover_text(format!(
-                            "Preferences · {}",
-                            self.shortcuts.label(Action::Preferences)
-                        ))
+                    if crate::toolbar::close(ui)
+                        .on_hover_text("Close tab and all its panes")
                         .clicked()
                     {
-                        self.show_settings = true;
+                        close_tab = Some(index);
                     }
-                });
+                    ui.add_space(4.0);
+                }
             });
+            if crate::toolbar::button(ui, "+")
+                .on_hover_text(format!(
+                    "New tab · {}",
+                    self.shortcuts.label(Action::NewTab)
+                ))
+                .clicked()
+            {
+                new_profile = Some((self.settings.default_profile, true));
+            }
+            crate::toolbar::menu(ui, |ui| {
+                for (index, profile) in self.settings.profiles.iter().enumerate() {
+                    if ui.button(&profile.name).clicked() {
+                        new_profile = Some((index, false));
+                        ui.close_menu();
+                    }
+                }
+                ui.separator();
+                if ui
+                    .add_enabled(
+                        !self.tabs.is_empty(),
+                        egui::Button::new(format!(
+                            "Split right  {}",
+                            self.shortcuts.label(Action::SplitRight)
+                        )),
+                    )
+                    .clicked()
+                {
+                    split_axis = Some(Axis::Columns);
+                    ui.close_menu();
+                }
+                if ui
+                    .add_enabled(
+                        !self.tabs.is_empty(),
+                        egui::Button::new(format!(
+                            "Split down  {}",
+                            self.shortcuts.label(Action::SplitDown)
+                        )),
+                    )
+                    .clicked()
+                {
+                    split_axis = Some(Axis::Rows);
+                    ui.close_menu();
+                }
+            });
+            if crate::toolbar::button(ui, "…")
+                .on_hover_text(format!(
+                    "Preferences · {}",
+                    self.shortcuts.label(Action::Preferences)
+                ))
+                .clicked()
+            {
+                self.show_settings = true;
+            }
+        });
         if let Some((index, inherit)) = new_profile.take() {
             if inherit {
                 self.new_tab(ctx);
@@ -1254,6 +1238,15 @@ impl eframe::App for Whostty {
         if let Some(memory) = &mut self.memory {
             memory.update(ctx);
         }
+        if self
+            .snapshot
+            .as_mut()
+            .is_some_and(|snapshot| snapshot.update(ctx))
+        {
+            self.snapshot = None;
+            self.allow_close = true;
+            ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+        }
     }
 }
 
@@ -1333,6 +1326,7 @@ mod tests {
             search_focus: false,
             reported_focus: None,
             memory: None,
+            snapshot: None,
         }
     }
 
