@@ -834,39 +834,35 @@ impl eframe::App for Whostty {
         let mut close_tab = None;
         let mut split_axis = None;
         crate::toolbar::show(ctx, |ui| {
-            egui::ScrollArea::horizontal()
-                .max_width((ui.available_width() - 104.0).max(100.0))
-                .show(ui, |ui| {
-                    ui.horizontal(|ui| {
-                        for (index, tab) in self.tabs.iter().enumerate() {
-                            let title: String = tab.pane().title.chars().take(24).collect();
-                            let title = format!(
-                                "{}{}",
-                                if tab.bell() && index != self.active {
-                                    "• "
-                                } else {
-                                    ""
-                                },
-                                title
-                            );
-                            if crate::toolbar::title(ui, index == self.active, &title)
-                                .on_hover_text(&tab.pane().title)
-                                .clicked()
-                            {
-                                self.active = index;
-                                self.focus_terminal = true;
-                                self.composition.clear();
-                            }
-                            if crate::toolbar::close(ui)
-                                .on_hover_text("Close tab and all its panes")
-                                .clicked()
-                            {
-                                close_tab = Some(index);
-                            }
-                            ui.add_space(4.0);
-                        }
-                    });
-                });
+            crate::toolbar::tabs(ui, |ui| {
+                for (index, tab) in self.tabs.iter().enumerate() {
+                    let title: String = tab.pane().title.chars().take(24).collect();
+                    let title = format!(
+                        "{}{}",
+                        if tab.bell() && index != self.active {
+                            "• "
+                        } else {
+                            ""
+                        },
+                        title
+                    );
+                    if crate::toolbar::title(ui, index == self.active, &title)
+                        .on_hover_text(&tab.pane().title)
+                        .clicked()
+                    {
+                        self.active = index;
+                        self.focus_terminal = true;
+                        self.composition.clear();
+                    }
+                    if crate::toolbar::close(ui)
+                        .on_hover_text("Close tab and all its panes")
+                        .clicked()
+                    {
+                        close_tab = Some(index);
+                    }
+                    ui.add_space(4.0);
+                }
+            });
             if crate::toolbar::button(ui, "+")
                 .on_hover_text(format!(
                     "New tab · {}",

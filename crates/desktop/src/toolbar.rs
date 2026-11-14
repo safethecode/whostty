@@ -39,6 +39,13 @@ pub fn title(ui: &mut Ui, selected: bool, title: &str) -> Response {
     ui.selectable_label(selected, RichText::new(title).size(14.0))
 }
 
+pub fn tabs<R>(ui: &mut Ui, contents: impl FnOnce(&mut Ui) -> R) -> R {
+    egui::ScrollArea::horizontal()
+        .max_width((ui.available_width() - 104.0).max(100.0))
+        .show(ui, |ui| ui.horizontal(contents).inner)
+        .inner
+}
+
 pub fn close(ui: &mut Ui) -> Response {
     button(ui, "×")
 }
@@ -57,10 +64,14 @@ pub fn button(ui: &mut Ui, text: &str) -> Response {
 pub fn menu<R>(ui: &mut Ui, contents: impl FnOnce(&mut Ui) -> R) -> egui::InnerResponse<Option<R>> {
     ui.scope(|ui| {
         ui.spacing_mut().button_padding = egui::Vec2::ZERO;
-        ui.menu_button(RichText::new("▾").size(14.0), |ui| {
-            ui.spacing_mut().button_padding = egui::vec2(8.0, 4.0);
-            contents(ui)
-        })
+        egui::menu::menu_custom_button(
+            ui,
+            egui::Button::new(RichText::new("▾").size(14.0)).min_size(egui::vec2(CONTROL, CONTROL)),
+            |ui| {
+                ui.spacing_mut().button_padding = egui::vec2(8.0, 4.0);
+                contents(ui)
+            },
+        )
     })
     .inner
 }
@@ -90,9 +101,15 @@ mod tests {
                     },
                     |ctx| {
                         show(ctx, |ui| {
-                            let tab = title(ui, true, "python.exe").rect;
+                            let mut tab = egui::Rect::NOTHING;
+                            let mut tab_close = egui::Rect::NOTHING;
+                            tabs(ui, |ui| {
+                                tab = title(ui, true, "python.exe").rect;
+                                tab_close = close(ui).rect;
+                                ui.add_space(4.0);
+                            });
                             let controls = [
-                                close(ui).rect,
+                                tab_close,
                                 button(ui, "+").rect,
                                 menu(ui, |_| {}).response.rect,
                                 button(ui, "...").rect,
@@ -120,5 +137,87 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn overflowing_tabs_leave_all_toolbar_actions_inside_the_header() {
+        for width in [480.0, 800.0, 1120.0] {
+            let ctx = egui::Context::default();
+            let _ = ctx.run(
+                egui::RawInput {
+                    screen_rect: Some(egui::Rect::from_min_size(
+                        egui::Pos2::ZERO,
+                        egui::vec2(width, 300.0),
+                    )),
+                    ..Default::default()
+                },
+                |ctx| {
+                    show(ctx, |ui| {
+                        tabs(ui, |ui| {
+                            for index in 0..12 {
+                                title(ui, index == 0, "한글 very long terminal tab title");
+                                close(ui);
+                                ui.add_space(4.0);
+                            }
+                        });
+                        for rect in [
+                            button(ui, "+").rect,
+                            menu(ui, |_| {}).response.rect,
+                            button(ui, "…").rect,
+                        ] {
+                            assert!(
+                                rect.min.x >= 10.0 && rect.max.x <= width - 10.0 + 0.1,
+                                "Action clipped at {width}: {rect:?}"
+                            );
+                            assert!(
+                                (rect.min.y - 8.0).abs() < 0.1
+                                    && (rect.height() - CONTROL).abs() < 0.1,
+                                "Overflow changed header alignment: {rect:?}"
+                            );
+                        }
+                    });
+                },
+            );
+        }
+    }
+
+    #[test]
+    fn sized_profile_button_still_opens_its_menu_on_click() {
+        let ctx = egui::Context::default();
+        let mut point = egui::Pos2::ZERO;
+        let mut opened = false;
+        for pressed in [None, Some(true), Some(false)] {
+            let events = pressed.map_or_else(Vec::new, |pressed| {
+                vec![
+                    egui::Event::PointerMoved(point),
+                    egui::Event::PointerButton {
+                        pos: point,
+                        button: egui::PointerButton::Primary,
+                        pressed,
+                        modifiers: Default::default(),
+                    },
+                ]
+            });
+            let _ = ctx.run(
+                egui::RawInput {
+                    screen_rect: Some(egui::Rect::from_min_size(
+                        egui::Pos2::ZERO,
+                        egui::vec2(480.0, 300.0),
+                    )),
+                    events,
+                    ..Default::default()
+                },
+                |ctx| {
+                    show(ctx, |ui| {
+                        let response = menu(ui, |ui| {
+                            opened = true;
+                            ui.button("PowerShell");
+                        });
+                        point = response.response.rect.center();
+                    });
+                },
+            );
+        }
+        assert!(opened, "Sized profile button did not open its menu");
     }
 }
