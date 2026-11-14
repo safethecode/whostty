@@ -835,7 +835,7 @@ impl eframe::App for Whostty {
         let mut split_axis = None;
         crate::toolbar::show(ctx, |ui| {
             egui::ScrollArea::horizontal()
-                .max_width((ui.available_width() - 122.0).max(100.0))
+                .max_width((ui.available_width() - 104.0).max(100.0))
                 .show(ui, |ui| {
                     ui.horizontal(|ui| {
                         for (index, tab) in self.tabs.iter().enumerate() {
@@ -863,7 +863,7 @@ impl eframe::App for Whostty {
                             {
                                 close_tab = Some(index);
                             }
-                            ui.add_space(5.0);
+                            ui.add_space(4.0);
                         }
                     });
                 });
@@ -911,7 +911,7 @@ impl eframe::App for Whostty {
                     ui.close_menu();
                 }
             });
-            if crate::toolbar::button(ui, "...")
+            if crate::toolbar::button(ui, "…")
                 .on_hover_text(format!(
                     "Preferences · {}",
                     self.shortcuts.label(Action::Preferences)

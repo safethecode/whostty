@@ -1,40 +1,68 @@
 use eframe::egui::{self, Color32, Response, RichText, Ui};
 
+pub const CONTROL: f32 = 28.0;
+
 pub fn show<R>(ctx: &egui::Context, contents: impl FnOnce(&mut Ui) -> R) {
     egui::TopBottomPanel::top("tabs")
         .exact_height(44.0)
         .frame(
             egui::Frame::new()
                 .fill(Color32::from_rgb(25, 30, 36))
-                .inner_margin(egui::Margin::symmetric(10, 7)),
+                .inner_margin(egui::Margin::symmetric(10, 8)),
         )
         .show(ctx, |ui| {
-            ui.horizontal(|ui| {
-                ui.label(
-                    RichText::new("W")
-                        .color(crate::view::ACCENT)
-                        .strong()
-                        .size(18.0),
+            // The header stays dark even when eframe follows a light host theme.
+            *ui.visuals_mut() = egui::Visuals::dark();
+            ui.visuals_mut().override_text_color = Some(crate::view::FOREGROUND);
+            ui.visuals_mut().selection.bg_fill = Color32::from_rgb(49, 72, 63);
+            ui.visuals_mut().selection.stroke.color = crate::view::ACCENT;
+            ui.spacing_mut().interact_size = egui::vec2(CONTROL, CONTROL);
+            ui.spacing_mut().item_spacing = egui::vec2(4.0, 0.0);
+            ui.spacing_mut().button_padding = egui::vec2(8.0, 4.0);
+            ui.horizontal_centered(|ui| {
+                ui.add_sized(
+                    [20.0, CONTROL],
+                    egui::Label::new(
+                        RichText::new("W")
+                            .color(crate::view::ACCENT)
+                            .strong()
+                            .size(18.0),
+                    ),
                 );
+                ui.add_space(4.0);
                 contents(ui)
             });
         });
 }
 
 pub fn title(ui: &mut Ui, selected: bool, title: &str) -> Response {
-    ui.selectable_label(selected, title)
+    ui.selectable_label(selected, RichText::new(title).size(14.0))
 }
 
 pub fn close(ui: &mut Ui) -> Response {
-    ui.small_button("×")
+    button(ui, "×")
 }
 
 pub fn button(ui: &mut Ui, text: &str) -> Response {
-    ui.button(text)
+    ui.scope(|ui| {
+        ui.spacing_mut().button_padding = egui::Vec2::ZERO;
+        ui.add_sized(
+            [CONTROL, CONTROL],
+            egui::Button::new(RichText::new(text).size(14.0)),
+        )
+    })
+    .inner
 }
 
 pub fn menu<R>(ui: &mut Ui, contents: impl FnOnce(&mut Ui) -> R) -> egui::InnerResponse<Option<R>> {
-    ui.menu_button("v", contents)
+    ui.scope(|ui| {
+        ui.spacing_mut().button_padding = egui::Vec2::ZERO;
+        ui.menu_button(RichText::new("▾").size(14.0), |ui| {
+            ui.spacing_mut().button_padding = egui::vec2(8.0, 4.0);
+            contents(ui)
+        })
+    })
+    .inner
 }
 
 #[cfg(test)]
