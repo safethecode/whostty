@@ -2,7 +2,7 @@ use std::{
     io::{Read, Write},
     sync::{
         atomic::{AtomicBool, Ordering},
-        mpsc::{self, Receiver, RecvTimeoutError, Sender, SyncSender},
+        mpsc::{self, Receiver, RecvTimeoutError, SyncSender, TrySendError},
         Arc, Mutex,
     },
     thread,
@@ -52,12 +52,43 @@ impl EventListener for Listener {
     }
 }
 
+#[derive(Default)]
+struct PendingControl {
+    resize: Option<Size>,
+    closed: bool,
+}
+
+struct Control {
+    pending: Arc<Mutex<PendingControl>>,
+    wake: SyncSender<()>,
+}
+
+impl Control {
+    fn resize(&self, size: Size) -> Result<()> {
+        let mut pending = self.pending.lock().unwrap_or_else(|e| e.into_inner());
+        anyhow::ensure!(!pending.closed, "The session has closed");
+        pending.resize = Some(size);
+        drop(pending);
+        match self.wake.try_send(()) {
+            Ok(()) | Err(TrySendError::Full(())) => Ok(()),
+            Err(TrySendError::Disconnected(())) => anyhow::bail!("The session worker has closed"),
+        }
+    }
+
+    fn close(&self) {
+        let mut pending = self.pending.lock().unwrap_or_else(|e| e.into_inner());
+        pending.closed = true;
+        pending.resize = None;
+        drop(pending);
+        let _ = self.wake.try_send(());
+    }
+}
+
 pub struct Session {
     pub terminal: Arc<Mutex<Terminal<Listener>>>,
     pub events: Receiver<SessionEvent>,
-    master: Option<Box<dyn MasterPty + Send>>,
     input: SyncSender<Vec<u8>>,
-    shutdown: Sender<Box<dyn MasterPty + Send>>,
+    control: Control,
     finished: Arc<AtomicBool>,
     exit: Arc<Mutex<Option<ExitState>>>,
     size: Size,
@@ -120,7 +151,12 @@ impl Session {
 
         let (events_tx, events) = mpsc::sync_channel(1024);
         let (input, input_rx) = mpsc::sync_channel::<Vec<u8>>(64);
-        let (shutdown, shutdown_rx) = mpsc::channel::<Box<dyn MasterPty + Send>>();
+        let (control_wake, control_rx) = mpsc::sync_channel(1);
+        let pending = Arc::new(Mutex::new(PendingControl::default()));
+        let control = Control {
+            pending: pending.clone(),
+            wake: control_wake,
+        };
         let finished = Arc::new(AtomicBool::new(false));
         let exit = Arc::new(Mutex::new(None));
         let terminal = Arc::new(Mutex::new(Terminal::new(
@@ -189,7 +225,8 @@ impl Session {
         let child_exit = exit.clone();
         thread::spawn(move || {
             // This thread alone owns/reaps the process, preventing signals to a reused PID.
-            // After natural exit it sleeps on the shutdown channel until the pane is closed.
+            // Native resize and master destruction can wait for output to drain.
+            // This worker owns both operations; neither may run on the GUI thread.
             let mut exited = false;
             let mut reaped = false;
             loop {
@@ -213,33 +250,48 @@ impl Session {
                         exited = true;
                     }
                 }
-                let master = if exited {
-                    shutdown_rx.recv().ok()
+                let (closed, resize) = {
+                    let mut pending = pending.lock().unwrap_or_else(|e| e.into_inner());
+                    (pending.closed, pending.resize.take())
+                };
+                if closed {
+                    break;
+                }
+                if !exited {
+                    if let Some(size) = resize {
+                        if let Err(error) = master.resize(pty_size(size)) {
+                            let _ = events_tx
+                                .try_send(SessionEvent::Error(format!("Resize PTY: {error:#}")));
+                            wake();
+                        }
+                    }
+                }
+                let disconnected = if exited {
+                    control_rx.recv().is_err()
                 } else {
-                    match shutdown_rx.recv_timeout(Duration::from_millis(100)) {
-                        Ok(master) => Some(master),
-                        Err(RecvTimeoutError::Timeout) => continue,
-                        Err(RecvTimeoutError::Disconnected) => None,
+                    match control_rx.recv_timeout(Duration::from_millis(100)) {
+                        Ok(()) | Err(RecvTimeoutError::Timeout) => false,
+                        Err(RecvTimeoutError::Disconnected) => true,
                     }
                 };
-                child_finished.store(true, Ordering::Release);
-                if !reaped {
-                    let _ = child.kill();
+                if disconnected {
+                    break;
                 }
-                // Closing ConPTY can block until output drains; keep it off the GUI thread.
-                drop(master);
-                if !reaped {
-                    let _ = child.wait();
-                }
-                break;
+            }
+            child_finished.store(true, Ordering::Release);
+            if !reaped {
+                let _ = child.kill();
+            }
+            drop(master);
+            if !reaped {
+                let _ = child.wait();
             }
         });
         Ok(Self {
             terminal,
             events,
-            master: Some(master),
             input,
-            shutdown,
+            control,
             finished,
             exit,
             size,
@@ -261,8 +313,7 @@ impl Session {
         if self.size == size {
             return Ok(());
         }
-        // ResizePseudoConsole can wait for the output pipe to drain. Never hold the grid
-        // lock across that call: the reader needs it to keep draining the pipe.
+        // Only update the grid here; native resize is coalesced on the lifecycle worker.
         {
             let mut terminal = self
                 .terminal
@@ -271,11 +322,7 @@ impl Session {
             terminal.resize(size);
         }
         if !self.finished.load(Ordering::Acquire) {
-            self.master
-                .as_ref()
-                .unwrap()
-                .resize(pty_size(size))
-                .context("Resize PTY")?;
+            self.control.resize(size)?;
         }
         self.size = size;
         Ok(())
@@ -305,12 +352,7 @@ impl Session {
 impl Drop for Session {
     fn drop(&mut self) {
         self.finished.store(true, Ordering::Release);
-        if let Some(master) = self.master.take() {
-            if let Err(error) = self.shutdown.send(master) {
-                // Also keep destruction off the GUI if the process worker failed unexpectedly.
-                thread::spawn(move || drop(error.0));
-            }
-        }
+        self.control.close();
     }
 }
 
@@ -353,7 +395,31 @@ fn pty_size(size: Size) -> PtySize {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::mpsc::Sender;
     use std::time::{Duration, Instant};
+
+    #[test]
+    fn close_discards_pending_resize_even_when_wake_slot_is_full() {
+        let (wake, receiver) = mpsc::sync_channel(1);
+        let pending = Arc::new(Mutex::new(PendingControl::default()));
+        let control = Control {
+            pending: pending.clone(),
+            wake,
+        };
+        for index in 0..1000 {
+            control.resize(Size::new(80 + index % 20, 24)).unwrap();
+        }
+        assert_eq!(pending.lock().unwrap().resize, Some(Size::new(99, 24)));
+        control.close();
+        assert!(pending.lock().unwrap().closed);
+        assert!(pending.lock().unwrap().resize.is_none());
+        assert!(control.resize(Size::new(81, 25)).is_err());
+        assert_eq!(
+            receiver.try_iter().count(),
+            1,
+            "Wake requests grew without bound"
+        );
+    }
 
     struct DelayedResize {
         master: Box<dyn MasterPty + Send>,
