@@ -71,6 +71,16 @@ impl Session {
         scrollback: usize,
         wake: Arc<dyn Fn() + Send + Sync>,
     ) -> Result<Self> {
+        Self::spawn_with_master(profile, size, scrollback, wake, |master| master)
+    }
+
+    fn spawn_with_master(
+        profile: &Profile,
+        size: Size,
+        scrollback: usize,
+        wake: Arc<dyn Fn() + Send + Sync>,
+        prepare: impl FnOnce(Box<dyn MasterPty + Send>) -> Box<dyn MasterPty + Send>,
+    ) -> Result<Self> {
         let pair = native_pty_system()
             .openpty(pty_size(size))
             .context("Create native PTY (ConPTY on Windows)")?;
@@ -106,6 +116,7 @@ impl Session {
             .spawn_command(command)
             .with_context(|| format!("Start {} ({})", profile.name, profile.program))?;
         drop(pair.slave);
+        let master = prepare(pair.master);
 
         let (events_tx, events) = mpsc::sync_channel(1024);
         let (input, input_rx) = mpsc::sync_channel::<Vec<u8>>(64);
@@ -226,7 +237,7 @@ impl Session {
         Ok(Self {
             terminal,
             events,
-            master: Some(pair.master),
+            master: Some(master),
             input,
             shutdown,
             finished,
@@ -343,6 +354,109 @@ fn pty_size(size: Size) -> PtySize {
 mod tests {
     use super::*;
     use std::time::{Duration, Instant};
+
+    struct DelayedResize {
+        master: Box<dyn MasterPty + Send>,
+        entered: Sender<Size>,
+        release: Mutex<Receiver<()>>,
+    }
+
+    impl MasterPty for DelayedResize {
+        fn resize(&self, size: PtySize) -> Result<()> {
+            self.entered
+                .send(Size::new(size.cols as usize, size.rows as usize))?;
+            // A timeout bounds the old synchronous-path regression failure.
+            let _ = self
+                .release
+                .lock()
+                .unwrap()
+                .recv_timeout(Duration::from_secs(3));
+            self.master.resize(size)
+        }
+        fn get_size(&self) -> Result<PtySize> {
+            self.master.get_size()
+        }
+        fn try_clone_reader(&self) -> Result<Box<dyn Read + Send>> {
+            self.master.try_clone_reader()
+        }
+        fn take_writer(&self) -> Result<Box<dyn Write + Send>> {
+            self.master.take_writer()
+        }
+        #[cfg(unix)]
+        fn process_group_leader(&self) -> Option<i32> {
+            self.master.process_group_leader()
+        }
+        #[cfg(unix)]
+        fn as_raw_fd(&self) -> Option<std::os::fd::RawFd> {
+            self.master.as_raw_fd()
+        }
+        #[cfg(unix)]
+        fn tty_name(&self) -> Option<std::path::PathBuf> {
+            self.master.tty_name()
+        }
+    }
+
+    #[test]
+    fn delayed_native_resize_does_not_block_caller_and_coalesces_pending_sizes() {
+        #[cfg(windows)]
+        let profile = Profile::new(
+            "delayed-resize",
+            "powershell.exe",
+            &["-NoProfile", "-Command", "Start-Sleep 30"],
+        );
+        #[cfg(not(windows))]
+        let profile = Profile::new("delayed-resize", "/bin/sh", &["-c", "sleep 30"]);
+        let (entered_tx, entered_rx) = mpsc::channel();
+        let (release_tx, release_rx) = mpsc::channel();
+        let mut session = Session::spawn_with_master(
+            &profile,
+            Size::new(80, 24),
+            100,
+            Arc::new(|| {}),
+            |master| {
+                Box::new(DelayedResize {
+                    master,
+                    entered: entered_tx,
+                    release: Mutex::new(release_rx),
+                })
+            },
+        )
+        .unwrap();
+        let first = Size::new(81, 25);
+        let start = Instant::now();
+        session.resize(first).unwrap();
+        assert!(
+            start.elapsed() < Duration::from_secs(1),
+            "Native resize blocked its caller"
+        );
+        assert_eq!(
+            entered_rx.recv_timeout(Duration::from_secs(2)).unwrap(),
+            first
+        );
+        for index in 0..1000 {
+            session.resize(Size::new(90 + index % 20, 30)).unwrap();
+        }
+        let latest = session.size();
+        release_tx.send(()).unwrap();
+        assert_eq!(
+            entered_rx.recv_timeout(Duration::from_secs(2)).unwrap(),
+            latest
+        );
+        let workers = Arc::downgrade(&session.finished);
+        // Closing while the second native call is blocked must also stay off the caller.
+        let start = Instant::now();
+        drop(session);
+        assert!(
+            start.elapsed() < Duration::from_secs(1),
+            "Session close blocked its caller"
+        );
+        release_tx.send(()).unwrap();
+        wait_until(|| workers.upgrade().is_none());
+        assert!(
+            entered_rx.try_recv().is_err(),
+            "Replayed intermediate resize requests"
+        );
+    }
 
     fn wait_until(mut predicate: impl FnMut() -> bool) {
         let deadline = Instant::now() + Duration::from_secs(15);
