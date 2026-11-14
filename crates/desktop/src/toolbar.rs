@@ -64,14 +64,35 @@ pub fn button(ui: &mut Ui, text: &str) -> Response {
 pub fn menu<R>(ui: &mut Ui, contents: impl FnOnce(&mut Ui) -> R) -> egui::InnerResponse<Option<R>> {
     ui.scope(|ui| {
         ui.spacing_mut().button_padding = egui::Vec2::ZERO;
-        egui::menu::menu_custom_button(
+        let mut response = egui::menu::menu_custom_button(
             ui,
-            egui::Button::new(RichText::new("▾").size(14.0)).min_size(egui::vec2(CONTROL, CONTROL)),
+            egui::Button::new("").min_size(egui::vec2(CONTROL, CONTROL)),
             |ui| {
                 ui.spacing_mut().button_padding = egui::vec2(8.0, 4.0);
                 contents(ui)
             },
-        )
+        );
+        // A geometric chevron avoids missing-glyph boxes in the default UI font.
+        let center = response.response.rect.center();
+        ui.painter().add(egui::Shape::line(
+            vec![
+                center + egui::vec2(-3.5, -2.0),
+                center + egui::vec2(0.0, 2.0),
+                center + egui::vec2(3.5, -2.0),
+            ],
+            egui::Stroke::new(1.5, ui.visuals().text_color()),
+        ));
+        response.response.widget_info(|| {
+            egui::WidgetInfo::labeled(
+                egui::WidgetType::Button,
+                ui.is_enabled(),
+                "Profiles and split actions",
+            )
+        });
+        response.response = response
+            .response
+            .on_hover_text("Profiles and split actions");
+        response
     })
     .inner
 }
